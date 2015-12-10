@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <solver>
-  <!--<environmentMode>FAST_ASSERT</environmentMode>-->
+  <environmentMode>FAST_ASSERT</environmentMode>
   <solutionClass>org.optaplanner.examples.projectjobscheduling.domain.Schedule</solutionClass>
   <entityClass>org.optaplanner.examples.projectjobscheduling.domain.Allocation</entityClass>
-
+<!-- <exhaustiveSearch> -->
+<!--     <exhaustiveSearchType>BRANCH_AND_BOUND</exhaustiveSearchType> -->
+<!--   </exhaustiveSearch> -->
   <scoreDirectorFactory>
-    <scoreDefinitionType>BENDABLE</scoreDefinitionType>
+    <!-- BENDABLE --><scoreDefinitionType>BENDABLE</scoreDefinitionType>
     <bendableHardLevelsSize>1</bendableHardLevelsSize>
     <bendableSoftLevelsSize>2</bendableSoftLevelsSize>
-    <incrementalScoreCalculatorClass>org.optaplanner.examples.projectjobscheduling.solver.score.ProjectJobSchedulingIncrementalScoreCalculator</incrementalScoreCalculatorClass>
-    <!--<scoreDrl>org/optaplanner/examples/projectjobscheduling/solver/projectJobSchedulingScoreRules.drl</scoreDrl>-->
+     <incrementalScoreCalculatorClass>org.optaplanner.examples.projectjobscheduling.solver.score.ProjectJobSchedulingIncrementalScoreCalculator</incrementalScoreCalculatorClass>
+<!--     <scoreDrl>org/optaplanner/examples/projectjobscheduling/solver/projectJobSchedulingScoreRules.drl</scoreDrl> -->
   </scoreDirectorFactory>
   <termination>
-    <secondsSpentLimit>290</secondsSpentLimit>
+    <secondsSpentLimit>36000</secondsSpentLimit>
   </termination>
 
   <constructionHeuristic>
