@@ -36,6 +36,7 @@ import org.apache.commons.io.IOUtils;
 import org.optaplanner.core.api.domain.solution.Solution;
 import org.optaplanner.examples.common.persistence.AbstractTxtSolutionImporter;
 import org.optaplanner.examples.projectjobscheduling.domain.Allocation;
+import org.optaplanner.examples.projectjobscheduling.domain.ClockingSide;
 import org.optaplanner.examples.projectjobscheduling.domain.ExecutionMode;
 import org.optaplanner.examples.projectjobscheduling.domain.Job;
 import org.optaplanner.examples.projectjobscheduling.domain.JobType;
@@ -262,8 +263,12 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
                     job.setProject(project);
                     if (i == 0) {
                         job.setJobType(JobType.SOURCE);
+                        //TODO: this is a testing hack 
+                        job.setClockingSide(ClockingSide.START);
                     } else if (i == jobListSize - 1) {
                         job.setJobType(JobType.SINK);
+                    	//TODO: this is a testing hack
+                    	job.setClockingSide(ClockingSide.END);
                     } else {
                         job.setJobType(JobType.STANDARD);
                     }
@@ -283,6 +288,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
                         throw new IllegalArgumentException("The tokens (" + Arrays.toString(tokens)
                                 + ") index 0 should be " + (i + 1) + ".");
                     }
+                    job.setoriginalJobId(Integer.parseInt(tokens[0]));
                     int executionModeListSize = Integer.parseInt(tokens[1]);
                     List<ExecutionMode> executionModeList = new ArrayList<ExecutionMode>(executionModeListSize);
                     for (int j = 0; j < executionModeListSize; j++) {
@@ -390,11 +396,15 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
                             continue;
                         }
                         if (baseSuccessorJobSet.contains(uncheckedJob)) {
-                            throw new IllegalStateException("The baseJob (" + baseJob
-                                    + ") has a direct successor (" + uncheckedJob
-                                    + ") that is also an indirect successor. That's pointless.");
+                            //throw new IllegalStateException("The baseJob (" + baseJob.getOriginalJobId()
+                        	logger.warn(("The baseJob (" + baseJob.getOriginalJobId()
+                                    + ") has a direct successor (" + uncheckedJob.getOriginalJobId()
+                                    + ") that is also an indirect successor. That's pointless."));
                         }
-                        uncheckedSuccessorQueue.addAll(uncheckedJob.getSuccessorJobList());
+                        else
+                        {
+                        	uncheckedSuccessorQueue.addAll(uncheckedJob.getSuccessorJobList());
+                        }
                     }
                 }
             }

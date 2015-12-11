@@ -150,6 +150,11 @@ public class Allocation extends AbstractPersistable {
     public JobType getJobType() {
         return job.getJobType();
     }
+    
+    public int OriginalJobId() {
+    	return job.getOriginalJobId();
+    }
+    
 
     public String getLabel() {
         return "Job " + job.getId();

@@ -24,7 +24,9 @@ import org.optaplanner.core.api.score.Score;
 import org.optaplanner.core.api.score.buildin.bendable.BendableScore;
 import org.optaplanner.core.impl.score.director.incremental.AbstractIncrementalScoreCalculator;
 import org.optaplanner.examples.projectjobscheduling.domain.Allocation;
+import org.optaplanner.examples.projectjobscheduling.domain.ClockingSide;
 import org.optaplanner.examples.projectjobscheduling.domain.ExecutionMode;
+import org.optaplanner.examples.projectjobscheduling.domain.Job;
 import org.optaplanner.examples.projectjobscheduling.domain.JobType;
 import org.optaplanner.examples.projectjobscheduling.domain.Project;
 import org.optaplanner.examples.projectjobscheduling.domain.ResourceRequirement;
@@ -43,6 +45,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
     private int hardScore;
     private int soft0Score;
     private int soft1Score;
+    private int soft2Score;
 
 
     public void resetWorkingSolution(Schedule schedule) {
@@ -59,6 +62,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
         hardScore = 0;
         soft0Score = 0;
         soft1Score = 0;
+        soft2Score = 0;
         int minimumReleaseDate = Integer.MAX_VALUE;
         for (Project p: projectList) {
             minimumReleaseDate = Math.min(p.getReleaseDate(), minimumReleaseDate);
@@ -121,6 +125,20 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
                 }
             }
         }
+        
+        //Total clocked delay
+        if (allocation.getJob().getClockingSide() == ClockingSide.START)
+        {
+        	soft2Score += allocation.getStartDate();// - allocation.getJob().getClock(); 
+        	//allocation.getJob().setClock(allocation.getStartDate());
+        	 
+        	
+        }
+        if (allocation.getJob().getClockingSide() == ClockingSide.END)
+        {
+        	soft2Score -= allocation.getEndDate(); //allocation.getJob().getClock();//  
+        	//allocation.getJob().setClock(allocation.getEndDate());
+        }
     }
 
     private void retract(Allocation allocation) {
@@ -151,6 +169,20 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
                 }
             }
         }
+        
+      //Total clocked delay
+        if (allocation.getJob().getClockingSide() == ClockingSide.START)
+        {
+        	soft2Score -= allocation.getStartDate();// - allocation.getJob().getClock(); 
+        	//allocation.getJob().setClock(allocation.getStartDate());
+        	 
+        	
+        }
+        if (allocation.getJob().getClockingSide() == ClockingSide.END)
+        {
+        	soft2Score += allocation.getEndDate(); //allocation.getJob().getClock(); 
+        	//allocation.getJob().setClock(allocation.getEndDate());
+        }
     }
 
     private void updateMaximumProjectEndDate() {
@@ -164,7 +196,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
     }
 
     public Score calculateScore() {
-        return BendableScore.valueOf(new int[] {hardScore}, new int[] {soft0Score, soft1Score});
+        return BendableScore.valueOf(new int[] {hardScore}, new int[] {soft0Score, soft1Score, soft2Score});
     }
 
 }

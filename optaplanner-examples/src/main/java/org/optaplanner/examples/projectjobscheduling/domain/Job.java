@@ -26,10 +26,23 @@ public class Job extends AbstractPersistable {
 
     private Project project;
     private JobType jobType;
+    private int originalJobId;
     private List<ExecutionMode> executionModeList;
+    private ClockingSide clockingSide;
 
     private List<Job> successorJobList;
 
+    
+    public ClockingSide getClockingSide() {
+    	return clockingSide;
+    }
+    
+    public void setClockingSide(ClockingSide clockingSide)
+    {
+    	this.clockingSide = clockingSide;
+    }
+ 
+    
     public Project getProject() {
         return project;
     }
@@ -44,6 +57,13 @@ public class Job extends AbstractPersistable {
 
     public void setJobType(JobType jobType) {
         this.jobType = jobType;
+    }
+    public int getOriginalJobId() {
+        return originalJobId;
+    }
+
+    public void setoriginalJobId(int originalJobId) {
+        this.originalJobId = originalJobId;
     }
 
     public List<ExecutionMode> getExecutionModeList() {
@@ -61,6 +81,7 @@ public class Job extends AbstractPersistable {
     public void setSuccessorJobList(List<Job> successorJobList) {
         this.successorJobList = successorJobList;
     }
+
 
     // ************************************************************************
     // Complex methods
