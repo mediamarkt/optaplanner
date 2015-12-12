@@ -32,9 +32,11 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.optaplanner.core.api.domain.solution.Solution;
 import org.optaplanner.examples.common.persistence.AbstractTxtSolutionImporter;
+import org.optaplanner.examples.common.persistence.AbstractTxtSolutionImporter.TxtInputBuilder;
 import org.optaplanner.examples.projectjobscheduling.domain.Allocation;
 import org.optaplanner.examples.projectjobscheduling.domain.ClockingSide;
 import org.optaplanner.examples.projectjobscheduling.domain.ExecutionMode;
@@ -46,430 +48,492 @@ import org.optaplanner.examples.projectjobscheduling.domain.Schedule;
 import org.optaplanner.examples.projectjobscheduling.domain.resource.GlobalResource;
 import org.optaplanner.examples.projectjobscheduling.domain.resource.LocalResource;
 import org.optaplanner.examples.projectjobscheduling.domain.resource.Resource;
+import org.optaplanner.examples.projectjobscheduling.persistence.ProjectJobSchedulingImporter.ClockMarksFileInputBuilder;
 
 public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 
-    public static void main(String[] args) {
-        new ProjectJobSchedulingImporter().convertAll();
-    }
+	public static class ClockMarksFileInputBuilder extends TxtInputBuilder {
+		private Schedule schedule;
 
-    public ProjectJobSchedulingImporter() {
-        super(new ProjectJobSchedulingDao());
-    }
+		public ClockMarksFileInputBuilder(Schedule schedule) {
+			this.schedule = schedule;
+		}
 
-    public TxtInputBuilder createTxtInputBuilder() {
-        return new ProjectJobSchedulingInputBuilder();
-    }
+		@Override
+		public Solution readSolution() throws IOException {
+			int marketsCount = readIntegerValue("Total markers: ");
+			for (int i = 0; i < marketsCount; i++) {
+				String[] tokens = splitBySpacesOrTabs(readStringValue());
+				this.schedule.getJobList()
+					.stream()
+					.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[1]))
+					.forEach(fj -> fj.setClockingSide(ClockingSide.START));
+				this.schedule.getJobList()
+				.stream()
+				.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[2]))
+				.forEach(fj -> fj.setClockingSide(ClockingSide.END));
+			}
+			return null;
+		}
 
-    public static class ProjectJobSchedulingInputBuilder extends TxtInputBuilder {
+	}
 
-        private Schedule schedule;
+	public static void main(String[] args) {
+		new ProjectJobSchedulingImporter().convertAll();
+	}
 
-        private int projectListSize;
-        private int resourceListSize;
-        private int globalResourceListSize;
+	public ProjectJobSchedulingImporter() {
+		super(new ProjectJobSchedulingDao());
+	}
 
-        private long projectId = 0L;
-        private long resourceId = 0L;
-        private long jobId = 0L;
-        private long executionModeId = 0L;
-        private long resourceRequirementId = 0L;
+	public TxtInputBuilder createTxtInputBuilder() {
+		return new ProjectJobSchedulingInputBuilder();
+	}
 
-        private Map<Project, File> projectFileMap;
+	public static class ProjectJobSchedulingInputBuilder extends TxtInputBuilder {
 
-        public Solution readSolution() throws IOException {
-            schedule = new Schedule();
-            schedule.setId(0L);
-            readProjectList();
-            readResourceList();
-            for (Map.Entry<Project, File> entry : projectFileMap.entrySet()) {
-                readProjectFile(entry.getKey(), entry.getValue());
-            }
-            removePointlessExecutionModes();
-            createAllocationList();
-            logger.info("Schedule {} has {} projects, {} jobs, {} execution modes, {} resources"
-                    + " and {} resource requirements.",
-                    getInputId(),
-                    schedule.getProjectList().size(),
-                    schedule.getJobList().size(),
-                    schedule.getExecutionModeList().size(),
-                    schedule.getResourceList().size(),
-                    schedule.getResourceRequirementList().size());
-            return schedule;
-        }
+		private Schedule schedule;
 
-        private void readProjectList() throws IOException {
-            projectListSize = readIntegerValue();
-            List<Project> projectList = new ArrayList<Project>(projectListSize);
-            projectFileMap = new LinkedHashMap<Project, File>(projectListSize);
-            for (int i = 0; i < projectListSize; i++) {
-                Project project = new Project();
-                project.setId(projectId);
-                project.setReleaseDate(readIntegerValue());
-                project.setCriticalPathDuration(readIntegerValue());
-                File projectFile = new File(inputFile.getParentFile(), readStringValue());
-                if (!projectFile.exists()) {
-                    throw new IllegalArgumentException("The projectFile (" + projectFile + ") does not exist.");
-                }
-                projectFileMap.put(project, projectFile);
-                projectList.add(project);
-                projectId++;
-            }
-            schedule.setProjectList(projectList);
-            schedule.setJobList(new ArrayList<Job>(projectListSize * 10));
-            schedule.setExecutionModeList(new ArrayList<ExecutionMode>(projectListSize * 10 * 5));
-        }
+		private int projectListSize;
+		private int resourceListSize;
+		private int globalResourceListSize;
 
-        private void readResourceList() throws IOException {
-            resourceListSize = readIntegerValue();
-            String[] tokens = splitBySpacesOrTabs(readStringValue(), resourceListSize);
-            List<Resource> resourceList = new ArrayList<Resource>(resourceListSize * projectListSize * 10);
-            for (int i = 0; i < resourceListSize; i++) {
-                int capacity = Integer.parseInt(tokens[i]);
-                if (capacity != -1) {
-                    GlobalResource resource = new GlobalResource();
-                    resource.setId(resourceId);
-                    resource.setCapacity(capacity);
-                    resourceList.add(resource);
-                    resourceId++;
-                }
-            }
-            globalResourceListSize = resourceList.size();
-            schedule.setResourceList(resourceList);
-            schedule.setResourceRequirementList(new ArrayList<ResourceRequirement>(
-                    projectListSize * 10 * 5 * resourceListSize));
-        }
+		private long projectId = 0L;
+		private long resourceId = 0L;
+		private long jobId = 0L;
+		private long executionModeId = 0L;
+		private long resourceRequirementId = 0L;
 
-        private void readProjectFile(Project project, File projectFile) {
-            BufferedReader bufferedReader = null;
-            try {
-                bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(projectFile), "UTF-8"));
-                ProjectFileInputBuilder projectFileInputBuilder = new ProjectFileInputBuilder(schedule, project);
-                projectFileInputBuilder.setInputFile(projectFile);
-                projectFileInputBuilder.setBufferedReader(bufferedReader);
-                try {
-                    projectFileInputBuilder.readSolution();
-                } catch (IllegalArgumentException e) {
-                    throw new IllegalArgumentException("Exception in projectFile (" + projectFile + ")", e);
-                } catch (IllegalStateException e) {
-                    throw new IllegalStateException("Exception in projectFile (" + projectFile + ")", e);
-                }
-            } catch (IOException e) {
-                throw new IllegalArgumentException("Could not read the projectFile (" + projectFile + ").", e);
-            } finally {
-                IOUtils.closeQuietly(bufferedReader);
-            }
-        }
+		private Map<Project, File> projectFileMap;
 
-        public class ProjectFileInputBuilder extends TxtInputBuilder {
+		public Solution readSolution() throws IOException {
+			schedule = new Schedule();
+			schedule.setId(0L);
+			readProjectList();
+			readResourceList();
+			for (Map.Entry<Project, File> entry : projectFileMap.entrySet()) {
+				readProjectFile(entry.getKey(), entry.getValue());
+			}
+			readClockingMarkers();
+			removePointlessExecutionModes();
+			createAllocationList();
+			logger.info(
+					"Schedule {} has {} projects, {} jobs, {} execution modes, {} resources"
+							+ " and {} resource requirements.",
+					getInputId(), schedule.getProjectList().size(), schedule.getJobList().size(),
+					schedule.getExecutionModeList().size(), schedule.getResourceList().size(),
+					schedule.getResourceRequirementList().size());
+			return schedule;
+		}
 
-            private Schedule schedule;
-            private Project project;
+		private void readClockingMarkers() {
+			String clockMarkersFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
+					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "clocks";
+			File clockMarkersFile = new File(clockMarkersFilePath);
+			if (!clockMarkersFile.exists()) {
+				logger.warn("The expected clock marks file (" + clockMarkersFilePath
+						+ ") does not exist. Proceeding without clock marks.");
+				return;
+			}
+			BufferedReader bufferedReader = null;
+			try {
+				bufferedReader = new BufferedReader(
+						new InputStreamReader(new FileInputStream(clockMarkersFile), "UTF-8"));
 
-            private int jobListSize;
-            private int renewableLocalResourceSize;
-            private int nonrenewableLocalResourceSize;
+				ClockMarksFileInputBuilder clockMarksFileInputBuilder = new ClockMarksFileInputBuilder(schedule);
+				clockMarksFileInputBuilder.setInputFile(clockMarkersFile);
+				clockMarksFileInputBuilder.setBufferedReader(bufferedReader);
+				try {
+					clockMarksFileInputBuilder.readSolution();
+				} catch (IllegalArgumentException e) {
+					throw new IllegalArgumentException("Exception in clock marks file (" + clockMarkersFilePath + ")",
+							e);
+				} catch (IllegalStateException e) {
+					throw new IllegalStateException(
+							"Exception in projectFile clock marks file (" + clockMarkersFilePath + ")", e);
+				}
+			} catch (IOException e) {
+				throw new IllegalArgumentException("Could not read the clock marks file (" + clockMarkersFilePath + ")",
+						e);
+			} finally {
+				IOUtils.closeQuietly(bufferedReader);
+			}
 
-            public ProjectFileInputBuilder(Schedule schedule, Project project) {
-                this.schedule = schedule;
-                this.project = project;
-            }
+		}
 
-            public Solution readSolution() throws IOException {
-                readHeader();
-                readResourceList();
-                readProjectInformation();
-                readPrecedenceRelations();
-                readRequestDurations();
-                readResourceAvailabilities();
-                detectPointlessSuccessor();
-                return null; // Hack so the code can reuse read methods from TxtInputBuilder
-            }
+		private void readProjectList() throws IOException {
+			projectListSize = readIntegerValue();
+			List<Project> projectList = new ArrayList<Project>(projectListSize);
+			projectFileMap = new LinkedHashMap<Project, File>(projectListSize);
+			for (int i = 0; i < projectListSize; i++) {
+				Project project = new Project();
+				project.setId(projectId);
+				project.setReleaseDate(readIntegerValue());
+				project.setCriticalPathDuration(readIntegerValue());
+				File projectFile = new File(inputFile.getParentFile(), readStringValue());
+				if (!projectFile.exists()) {
+					throw new IllegalArgumentException("The projectFile (" + projectFile + ") does not exist.");
+				}
+				projectFileMap.put(project, projectFile);
+				projectList.add(project);
+				projectId++;
+			}
+			schedule.setProjectList(projectList);
+			schedule.setJobList(new ArrayList<Job>(projectListSize * 10));
+			schedule.setExecutionModeList(new ArrayList<ExecutionMode>(projectListSize * 10 * 5));
+		}
 
-            private void readHeader() throws IOException {
-                readConstantLine("\\*+");
-                readStringValue("file with basedata *:");
-                readStringValue("initial value random generator *:");
-                readConstantLine("\\*+");
-                int projects = readIntegerValue("projects *:");
-                if (projects != 1) {
-                    throw new IllegalArgumentException("The projects value (" + projects + ") should always be 1.");
-                }
-                jobListSize = readIntegerValue("jobs \\(incl\\. supersource/sink *\\) *:");
-                int horizon = readIntegerValue("horizon *:");
-                // Ignore horizon
-            }
+		private void readResourceList() throws IOException {
+			resourceListSize = readIntegerValue();
+			String[] tokens = splitBySpacesOrTabs(readStringValue(), resourceListSize);
+			List<Resource> resourceList = new ArrayList<Resource>(resourceListSize * projectListSize * 10);
+			for (int i = 0; i < resourceListSize; i++) {
+				int capacity = Integer.parseInt(tokens[i]);
+				if (capacity != -1) {
+					GlobalResource resource = new GlobalResource();
+					resource.setId(resourceId);
+					resource.setCapacity(capacity);
+					resourceList.add(resource);
+					resourceId++;
+				}
+			}
+			globalResourceListSize = resourceList.size();
+			schedule.setResourceList(resourceList);
+			schedule.setResourceRequirementList(
+					new ArrayList<ResourceRequirement>(projectListSize * 10 * 5 * resourceListSize));
+		}
 
-            private void readResourceList() throws IOException {
-                readConstantLine("RESOURCES");
-                int renewableResourceSize = readIntegerValue("\\- renewable *:", "R");
-                if (renewableResourceSize < globalResourceListSize) {
-                    throw new IllegalArgumentException("The renewableResourceSize (" + renewableResourceSize
-                            + ") can not be less than globalResourceListSize (" + globalResourceListSize + ").");
-                }
-                renewableLocalResourceSize = renewableResourceSize - globalResourceListSize;
-                nonrenewableLocalResourceSize = readIntegerValue("\\- nonrenewable *:", "N");
-                int doublyConstrainedResourceSize = readIntegerValue("\\- doubly constrained *:", "D");
-                if (doublyConstrainedResourceSize != 0) {
-                    throw new IllegalArgumentException("The doublyConstrainedResourceSize ("
-                            + doublyConstrainedResourceSize + ") should always be 0.");
-                }
-                List<LocalResource> localResourceList = new ArrayList<LocalResource>(
-                        globalResourceListSize + renewableLocalResourceSize + nonrenewableLocalResourceSize);
-                for (int i = 0; i < renewableLocalResourceSize; i++) {
-                    LocalResource localResource = new LocalResource();
-                    localResource.setId(resourceId);
-                    localResource.setProject(project);
-                    localResource.setRenewable(true);
-                    resourceId++;
-                    localResourceList.add(localResource);
-                }
-                for (int i = 0; i < nonrenewableLocalResourceSize; i++) {
-                    LocalResource localResource = new LocalResource();
-                    localResource.setId(resourceId);
-                    localResource.setProject(project);
-                    localResource.setRenewable(false);
-                    resourceId++;
-                    localResourceList.add(localResource);
-                }
-                project.setLocalResourceList(localResourceList);
-                schedule.getResourceList().addAll(localResourceList);
-                readConstantLine("\\*+");
-            }
+		private void readProjectFile(Project project, File projectFile) {
+			BufferedReader bufferedReader = null;
+			try {
+				bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(projectFile), "UTF-8"));
+				ProjectFileInputBuilder projectFileInputBuilder = new ProjectFileInputBuilder(schedule, project);
+				projectFileInputBuilder.setInputFile(projectFile);
+				projectFileInputBuilder.setBufferedReader(bufferedReader);
+				try {
+					projectFileInputBuilder.readSolution();
+				} catch (IllegalArgumentException e) {
+					throw new IllegalArgumentException("Exception in projectFile (" + projectFile + ")", e);
+				} catch (IllegalStateException e) {
+					throw new IllegalStateException("Exception in projectFile (" + projectFile + ")", e);
+				}
+			} catch (IOException e) {
+				throw new IllegalArgumentException("Could not read the projectFile (" + projectFile + ").", e);
+			} finally {
+				IOUtils.closeQuietly(bufferedReader);
+			}
+		}
 
-            private void readProjectInformation() throws IOException {
-                readConstantLine("PROJECT INFORMATION:");
-                readConstantLine("pronr\\. +\\#jobs +rel\\.date +duedate +tardcost +MPM\\-Time");
-                String[] tokens = splitBySpacesOrTabs(readStringValue(), 6);
-                if (Integer.parseInt(tokens[0]) != 1) {
-                    throw new IllegalArgumentException("The project information tokens (" + Arrays.toString(tokens)
-                            + ") index 0 should be 1.");
-                }
-                if (Integer.parseInt(tokens[1]) != jobListSize - 2) {
-                    throw new IllegalArgumentException("The project information tokens (" + Arrays.toString(tokens)
-                            + ") index 1 should be " + (jobListSize - 2) + ".");
-                }
-                // Ignore releaseDate, dueDate, tardinessCost and mpmTime
-                readConstantLine("\\*+");
-            }
+		public class ProjectFileInputBuilder extends TxtInputBuilder {
 
-            private void readPrecedenceRelations() throws IOException {
-                readConstantLine("PRECEDENCE RELATIONS:");
-                readConstantLine("jobnr\\. +\\#modes +\\#successors +successors");
-                List<Job> jobList = new ArrayList<Job>(jobListSize);
-                for (int i = 0; i < jobListSize; i++) {
-                    Job job = new Job();
-                    job.setId(jobId);
-                    job.setProject(project);
-                    if (i == 0) {
-                        job.setJobType(JobType.SOURCE);
-                        //TODO: this is a testing hack 
-                        job.setClockingSide(ClockingSide.START);
-                    } else if (i == jobListSize - 1) {
-                        job.setJobType(JobType.SINK);
-                    	//TODO: this is a testing hack
-                    	job.setClockingSide(ClockingSide.END);
-                    } else {
-                        job.setJobType(JobType.STANDARD);
-                    }
-                    jobList.add(job);
-                    jobId++;
-                }
-                project.setJobList(jobList);
-                schedule.getJobList().addAll(jobList);
-                for (int i = 0; i < jobListSize; i++) {
-                    Job job = jobList.get(i);
-                    String[] tokens = splitBySpacesOrTabs(readStringValue());
-                    if (tokens.length < 3) {
-                        throw new IllegalArgumentException("The tokens (" + Arrays.toString(tokens)
-                                + ") should be at least 3 in length.");
-                    }
-                    if (Integer.parseInt(tokens[0]) != i + 1) {
-                        throw new IllegalArgumentException("The tokens (" + Arrays.toString(tokens)
-                                + ") index 0 should be " + (i + 1) + ".");
-                    }
-                    job.setoriginalJobId(Integer.parseInt(tokens[0]));
-                    int executionModeListSize = Integer.parseInt(tokens[1]);
-                    List<ExecutionMode> executionModeList = new ArrayList<ExecutionMode>(executionModeListSize);
-                    for (int j = 0; j < executionModeListSize; j++) {
-                        ExecutionMode executionMode = new ExecutionMode();
-                        executionMode.setId(executionModeId);
-                        executionMode.setJob(job);
-                        executionModeList.add(executionMode);
-                        executionModeId++;
-                    }
-                    job.setExecutionModeList(executionModeList);
-                    schedule.getExecutionModeList().addAll(executionModeList);
-                    int successorJobListSize = Integer.parseInt(tokens[2]);
-                    if (tokens.length != 3 + successorJobListSize) {
-                        throw new IllegalArgumentException("The tokens (" + Arrays.toString(tokens)
-                                + ") should be " + (3 + successorJobListSize) + " in length.");
-                    }
-                    List<Job> successorJobList = new ArrayList<Job>(successorJobListSize);
-                    for (int j = 0; j < successorJobListSize; j++) {
-                        int successorIndex = Integer.parseInt(tokens[3 + j]);
-                        Job successorJob = project.getJobList().get(successorIndex - 1);
-                        successorJobList.add(successorJob);
-                    }
-                    job.setSuccessorJobList(successorJobList);
-                }
-                readConstantLine("\\*+");
-            }
+			private Schedule schedule;
+			private Project project;
 
-            private void readRequestDurations() throws IOException {
-                readConstantLine("REQUESTS/DURATIONS:");
-                splitBySpacesOrTabs(readStringValue());
-                readConstantLine("\\-+");
-                int resourceSize = globalResourceListSize + renewableLocalResourceSize + nonrenewableLocalResourceSize;
-                for (int i = 0; i < jobListSize; i++) {
-                    Job job = project.getJobList().get(i);
-                    int executionModeSize = job.getExecutionModeList().size();
-                    for (int j = 0; j < executionModeSize; j++) {
-                        ExecutionMode executionMode = job.getExecutionModeList().get(j);
-                        boolean first = j == 0;
-                        String[] tokens = splitBySpacesOrTabs(readStringValue(), (first ? 3 : 2) + resourceSize);
-                        if (first && Integer.parseInt(tokens[0]) != i + 1) {
-                            throw new IllegalArgumentException("The tokens (" + Arrays.toString(tokens)
-                                    + ") index 0 should be " + (i + 1) + ".");
-                        }
-                        if (Integer.parseInt(tokens[first ? 1 : 0]) != j + 1) {
-                            throw new IllegalArgumentException("The tokens (" + Arrays.toString(tokens)
-                                    + ") index " + (first ? 1 : 0) + " should be " + (j + 1) + ".");
-                        }
-                        int duration = Integer.parseInt(tokens[first ? 2 : 1]);
-                        executionMode.setDuration(duration);
-                        List<ResourceRequirement> resourceRequirementList = new ArrayList<ResourceRequirement>(
-                                resourceSize);
-                        for (int k = 0; k < resourceSize; k++) {
-                            int requirement = Integer.parseInt(tokens[(first ? 3 : 2) + k]);
-                            if (requirement != 0) {
-                                ResourceRequirement resourceRequirement = new ResourceRequirement();
-                                resourceRequirement.setId(resourceRequirementId);
-                                resourceRequirement.setExecutionMode(executionMode);
-                                Resource resource;
-                                if (k < globalResourceListSize) {
-                                    resource = schedule.getResourceList().get(k);
-                                } else {
-                                    resource = project.getLocalResourceList().get(k - globalResourceListSize);
-                                }
-                                resourceRequirement.setResource(resource);
-                                resourceRequirement.setRequirement(requirement);
-                                resourceRequirementList.add(resourceRequirement);
-                                resourceRequirementId++;
-                            }
-                        }
-                        executionMode.setResourceRequirementList(resourceRequirementList);
-                        schedule.getResourceRequirementList().addAll(resourceRequirementList);
-                    }
-                }
-                readConstantLine("\\*+");
-            }
+			private int jobListSize;
+			private int renewableLocalResourceSize;
+			private int nonrenewableLocalResourceSize;
 
-            private void readResourceAvailabilities() throws IOException {
-                readConstantLine("RESOURCEAVAILABILITIES:");
-                splitBySpacesOrTabs(readStringValue());
-                int resourceSize = globalResourceListSize + renewableLocalResourceSize + nonrenewableLocalResourceSize;
-                String[] tokens = splitBySpacesOrTabs(readStringValue(), resourceSize);
-                for (int i = 0; i < resourceSize; i++) {
-                    int capacity = Integer.parseInt(tokens[i]);
-                    if (i < globalResourceListSize) {
-                        // Overwritten by global resource
-                    } else {
-                        Resource resource = project.getLocalResourceList().get(i - globalResourceListSize);
-                        resource.setCapacity(capacity);
-                    }
-                }
-                readConstantLine("\\*+");
-            }
+			public ProjectFileInputBuilder(Schedule schedule, Project project) {
+				this.schedule = schedule;
+				this.project = project;
+			}
 
-            private void detectPointlessSuccessor() {
-                for (Job baseJob : project.getJobList()) {
-                    Set<Job> baseSuccessorJobSet = new HashSet<Job>(baseJob.getSuccessorJobList());
-                    Set<Job> checkedSuccessorSet = new HashSet<Job>(project.getJobList().size());
-                    Queue<Job> uncheckedSuccessorQueue = new ArrayDeque<Job>(project.getJobList().size());
-                    for (Job baseSuccessorJob : baseJob.getSuccessorJobList()) {
-                        uncheckedSuccessorQueue.addAll(baseSuccessorJob.getSuccessorJobList());
-                    }
-                    while (!uncheckedSuccessorQueue.isEmpty()) {
-                        Job uncheckedJob = uncheckedSuccessorQueue.remove();
-                        if (checkedSuccessorSet.contains(uncheckedJob)) {
-                            continue;
-                        }
-                        if (baseSuccessorJobSet.contains(uncheckedJob)) {
-                            //throw new IllegalStateException("The baseJob (" + baseJob.getOriginalJobId()
-                        	logger.warn(("The baseJob (" + baseJob.getOriginalJobId()
-                                    + ") has a direct successor (" + uncheckedJob.getOriginalJobId()
-                                    + ") that is also an indirect successor. That's pointless."));
-                        }
-                        else
-                        {
-                        	uncheckedSuccessorQueue.addAll(uncheckedJob.getSuccessorJobList());
-                        }
-                    }
-                }
-            }
+			public Solution readSolution() throws IOException {
+				readHeader();
+				readResourceList();
+				readProjectInformation();
+				readPrecedenceRelations();
+				readRequestDurations();
+				readResourceAvailabilities();
+				detectPointlessSuccessor();
+				return null; // Hack so the code can reuse read methods from
+								// TxtInputBuilder
+			}
 
-        }
+			private void readHeader() throws IOException {
+				readConstantLine("\\*+");
+				readStringValue("file with basedata *:");
+				readStringValue("initial value random generator *:");
+				readConstantLine("\\*+");
+				int projects = readIntegerValue("projects *:");
+				if (projects != 1) {
+					throw new IllegalArgumentException("The projects value (" + projects + ") should always be 1.");
+				}
+				jobListSize = readIntegerValue("jobs \\(incl\\. supersource/sink *\\) *:");
+				int horizon = readIntegerValue("horizon *:");
+				// Ignore horizon
+			}
 
-        private void removePointlessExecutionModes() {
-            // TODO iterate through schedule.getJobList(), find pointless ExecutionModes
-            // and delete them both from the job and from schedule.getExecutionModeList()
-        }
+			private void readResourceList() throws IOException {
+				readConstantLine("RESOURCES");
+				int renewableResourceSize = readIntegerValue("\\- renewable *:", "R");
+				if (renewableResourceSize < globalResourceListSize) {
+					throw new IllegalArgumentException("The renewableResourceSize (" + renewableResourceSize
+							+ ") can not be less than globalResourceListSize (" + globalResourceListSize + ").");
+				}
+				renewableLocalResourceSize = renewableResourceSize - globalResourceListSize;
+				nonrenewableLocalResourceSize = readIntegerValue("\\- nonrenewable *:", "N");
+				int doublyConstrainedResourceSize = readIntegerValue("\\- doubly constrained *:", "D");
+				if (doublyConstrainedResourceSize != 0) {
+					throw new IllegalArgumentException("The doublyConstrainedResourceSize ("
+							+ doublyConstrainedResourceSize + ") should always be 0.");
+				}
+				List<LocalResource> localResourceList = new ArrayList<LocalResource>(
+						globalResourceListSize + renewableLocalResourceSize + nonrenewableLocalResourceSize);
+				for (int i = 0; i < renewableLocalResourceSize; i++) {
+					LocalResource localResource = new LocalResource();
+					localResource.setId(resourceId);
+					localResource.setProject(project);
+					localResource.setRenewable(true);
+					resourceId++;
+					localResourceList.add(localResource);
+				}
+				for (int i = 0; i < nonrenewableLocalResourceSize; i++) {
+					LocalResource localResource = new LocalResource();
+					localResource.setId(resourceId);
+					localResource.setProject(project);
+					localResource.setRenewable(false);
+					resourceId++;
+					localResourceList.add(localResource);
+				}
+				project.setLocalResourceList(localResourceList);
+				schedule.getResourceList().addAll(localResourceList);
+				readConstantLine("\\*+");
+			}
 
-        private void createAllocationList() {
-            List<Job> jobList = schedule.getJobList();
-            List<Allocation> allocationList = new ArrayList<Allocation>(jobList.size());
-            Map<Job, Allocation> jobToAllocationMap = new HashMap<Job, Allocation>(jobList.size());
-            Map<Project, Allocation> projectToSourceAllocationMap = new HashMap<Project, Allocation>(projectListSize);
-            Map<Project, Allocation> projectToSinkAllocationMap = new HashMap<Project, Allocation>(projectListSize);
-            for (Job job : jobList) {
-                Allocation allocation = new Allocation();
-                allocation.setId(job.getId());
-                allocation.setJob(job);
-                allocation.setPredecessorAllocationList(new ArrayList<Allocation>(job.getSuccessorJobList().size()));
-                allocation.setSuccessorAllocationList(new ArrayList<Allocation>(job.getSuccessorJobList().size()));
-                // Uninitialized allocations take no time, but don't break the predecessorsDoneDate cascade to sink.
-                allocation.setPredecessorsDoneDate(job.getProject().getReleaseDate());
-                if (job.getJobType() == JobType.SOURCE) {
-                    allocation.setDelay(0);
-                    if (job.getExecutionModeList().size() != 1) {
-                        throw new IllegalArgumentException("The job (" + job
-                                + ")'s executionModeList (" + job.getExecutionModeList()
-                                + ") is expected to be a singleton.");
-                    }
-                    allocation.setExecutionMode(job.getExecutionModeList().get(0));
-                    projectToSourceAllocationMap.put(job.getProject(), allocation);
-                } else if (job.getJobType() == JobType.SINK) {
-                    allocation.setDelay(0);
-                    if (job.getExecutionModeList().size() != 1) {
-                        throw new IllegalArgumentException("The job (" + job
-                                + ")'s executionModeList (" + job.getExecutionModeList()
-                                + ") is expected to be a singleton.");
-                    }
-                    allocation.setExecutionMode(job.getExecutionModeList().get(0));
-                    projectToSinkAllocationMap.put(job.getProject(), allocation);
-                }
-                allocationList.add(allocation);
-                jobToAllocationMap.put(job, allocation);
-            }
-            for (Allocation allocation : allocationList) {
-                Job job = allocation.getJob();
-                allocation.setSourceAllocation(projectToSourceAllocationMap.get(job.getProject()));
-                allocation.setSinkAllocation(projectToSinkAllocationMap.get(job.getProject()));
-                for (Job successorJob : job.getSuccessorJobList()) {
-                    Allocation successorAllocation = jobToAllocationMap.get(successorJob);
-                    allocation.getSuccessorAllocationList().add(successorAllocation);
-                    successorAllocation.getPredecessorAllocationList().add(allocation);
-                }
-            }
-            for (Allocation sourceAllocation : projectToSourceAllocationMap.values()) {
-                for (Allocation allocation : sourceAllocation.getSuccessorAllocationList()) {
-                    allocation.setPredecessorsDoneDate(sourceAllocation.getEndDate());
-                }
-            }
-            schedule.setAllocationList(allocationList);
-        }
+			private void readProjectInformation() throws IOException {
+				readConstantLine("PROJECT INFORMATION:");
+				readConstantLine("pronr\\. +\\#jobs +rel\\.date +duedate +tardcost +MPM\\-Time");
+				String[] tokens = splitBySpacesOrTabs(readStringValue(), 6);
+				if (Integer.parseInt(tokens[0]) != 1) {
+					throw new IllegalArgumentException(
+							"The project information tokens (" + Arrays.toString(tokens) + ") index 0 should be 1.");
+				}
+				if (Integer.parseInt(tokens[1]) != jobListSize - 2) {
+					throw new IllegalArgumentException("The project information tokens (" + Arrays.toString(tokens)
+							+ ") index 1 should be " + (jobListSize - 2) + ".");
+				}
+				// Ignore releaseDate, dueDate, tardinessCost and mpmTime
+				readConstantLine("\\*+");
+			}
 
-    }
+			private void readPrecedenceRelations() throws IOException {
+				readConstantLine("PRECEDENCE RELATIONS:");
+				readConstantLine("jobnr\\. +\\#modes +\\#successors +successors");
+				List<Job> jobList = new ArrayList<Job>(jobListSize);
+				for (int i = 0; i < jobListSize; i++) {
+					Job job = new Job();
+					job.setId(jobId);
+					job.setProject(project);
+					if (i == 0) {
+						job.setJobType(JobType.SOURCE);
+						// TODO: this is a testing hack
+						//job.setClockingSide(ClockingSide.START);
+					} else if (i == jobListSize - 1) {
+						job.setJobType(JobType.SINK);
+						// TODO: this is a testing hack
+						//job.setClockingSide(ClockingSide.END);
+					} else {
+						job.setJobType(JobType.STANDARD);
+					}
+					jobList.add(job);
+					jobId++;
+				}
+				project.setJobList(jobList);
+				schedule.getJobList().addAll(jobList);
+				for (int i = 0; i < jobListSize; i++) {
+					Job job = jobList.get(i);
+					String[] tokens = splitBySpacesOrTabs(readStringValue());
+					if (tokens.length < 3) {
+						throw new IllegalArgumentException(
+								"The tokens (" + Arrays.toString(tokens) + ") should be at least 3 in length.");
+					}
+					if (Integer.parseInt(tokens[0]) != i + 1) {
+						throw new IllegalArgumentException(
+								"The tokens (" + Arrays.toString(tokens) + ") index 0 should be " + (i + 1) + ".");
+					}
+					job.setoriginalJobId(Integer.parseInt(tokens[0]));
+					int executionModeListSize = Integer.parseInt(tokens[1]);
+					List<ExecutionMode> executionModeList = new ArrayList<ExecutionMode>(executionModeListSize);
+					for (int j = 0; j < executionModeListSize; j++) {
+						ExecutionMode executionMode = new ExecutionMode();
+						executionMode.setId(executionModeId);
+						executionMode.setJob(job);
+						executionModeList.add(executionMode);
+						executionModeId++;
+					}
+					job.setExecutionModeList(executionModeList);
+					schedule.getExecutionModeList().addAll(executionModeList);
+					int successorJobListSize = Integer.parseInt(tokens[2]);
+					if (tokens.length != 3 + successorJobListSize) {
+						throw new IllegalArgumentException("The tokens (" + Arrays.toString(tokens) + ") should be "
+								+ (3 + successorJobListSize) + " in length.");
+					}
+					List<Job> successorJobList = new ArrayList<Job>(successorJobListSize);
+					for (int j = 0; j < successorJobListSize; j++) {
+						int successorIndex = Integer.parseInt(tokens[3 + j]);
+						Job successorJob = project.getJobList().get(successorIndex - 1);
+						successorJobList.add(successorJob);
+					}
+					job.setSuccessorJobList(successorJobList);
+				}
+				readConstantLine("\\*+");
+			}
+
+			private void readRequestDurations() throws IOException {
+				readConstantLine("REQUESTS/DURATIONS:");
+				splitBySpacesOrTabs(readStringValue());
+				readConstantLine("\\-+");
+				int resourceSize = globalResourceListSize + renewableLocalResourceSize + nonrenewableLocalResourceSize;
+				for (int i = 0; i < jobListSize; i++) {
+					Job job = project.getJobList().get(i);
+					int executionModeSize = job.getExecutionModeList().size();
+					for (int j = 0; j < executionModeSize; j++) {
+						ExecutionMode executionMode = job.getExecutionModeList().get(j);
+						boolean first = j == 0;
+						String[] tokens = splitBySpacesOrTabs(readStringValue(), (first ? 3 : 2) + resourceSize);
+						if (first && Integer.parseInt(tokens[0]) != i + 1) {
+							throw new IllegalArgumentException(
+									"The tokens (" + Arrays.toString(tokens) + ") index 0 should be " + (i + 1) + ".");
+						}
+						if (Integer.parseInt(tokens[first ? 1 : 0]) != j + 1) {
+							throw new IllegalArgumentException("The tokens (" + Arrays.toString(tokens) + ") index "
+									+ (first ? 1 : 0) + " should be " + (j + 1) + ".");
+						}
+						int duration = Integer.parseInt(tokens[first ? 2 : 1]);
+						executionMode.setDuration(duration);
+						List<ResourceRequirement> resourceRequirementList = new ArrayList<ResourceRequirement>(
+								resourceSize);
+						for (int k = 0; k < resourceSize; k++) {
+							int requirement = Integer.parseInt(tokens[(first ? 3 : 2) + k]);
+							if (requirement != 0) {
+								ResourceRequirement resourceRequirement = new ResourceRequirement();
+								resourceRequirement.setId(resourceRequirementId);
+								resourceRequirement.setExecutionMode(executionMode);
+								Resource resource;
+								if (k < globalResourceListSize) {
+									resource = schedule.getResourceList().get(k);
+								} else {
+									resource = project.getLocalResourceList().get(k - globalResourceListSize);
+								}
+								resourceRequirement.setResource(resource);
+								resourceRequirement.setRequirement(requirement);
+								resourceRequirementList.add(resourceRequirement);
+								resourceRequirementId++;
+							}
+						}
+						executionMode.setResourceRequirementList(resourceRequirementList);
+						schedule.getResourceRequirementList().addAll(resourceRequirementList);
+					}
+				}
+				readConstantLine("\\*+");
+			}
+
+			private void readResourceAvailabilities() throws IOException {
+				readConstantLine("RESOURCEAVAILABILITIES:");
+				splitBySpacesOrTabs(readStringValue());
+				int resourceSize = globalResourceListSize + renewableLocalResourceSize + nonrenewableLocalResourceSize;
+				String[] tokens = splitBySpacesOrTabs(readStringValue(), resourceSize);
+				for (int i = 0; i < resourceSize; i++) {
+					int capacity = Integer.parseInt(tokens[i]);
+					if (i < globalResourceListSize) {
+						// Overwritten by global resource
+					} else {
+						Resource resource = project.getLocalResourceList().get(i - globalResourceListSize);
+						resource.setCapacity(capacity);
+					}
+				}
+				readConstantLine("\\*+");
+			}
+
+			private void detectPointlessSuccessor() {
+				for (Job baseJob : project.getJobList()) {
+					Set<Job> baseSuccessorJobSet = new HashSet<Job>(baseJob.getSuccessorJobList());
+					Set<Job> checkedSuccessorSet = new HashSet<Job>(project.getJobList().size());
+					Queue<Job> uncheckedSuccessorQueue = new ArrayDeque<Job>(project.getJobList().size());
+					for (Job baseSuccessorJob : baseJob.getSuccessorJobList()) {
+						uncheckedSuccessorQueue.addAll(baseSuccessorJob.getSuccessorJobList());
+					}
+					while (!uncheckedSuccessorQueue.isEmpty()) {
+						Job uncheckedJob = uncheckedSuccessorQueue.remove();
+						if (checkedSuccessorSet.contains(uncheckedJob)) {
+							continue;
+						}
+						if (baseSuccessorJobSet.contains(uncheckedJob)) {
+							// throw new IllegalStateException("The baseJob (" +
+							// baseJob.getOriginalJobId()
+							logger.warn(("The baseJob (" + baseJob.getOriginalJobId() + ") has a direct successor ("
+									+ uncheckedJob.getOriginalJobId()
+									+ ") that is also an indirect successor. That's pointless."));
+						} else {
+							uncheckedSuccessorQueue.addAll(uncheckedJob.getSuccessorJobList());
+						}
+					}
+				}
+			}
+
+		}
+
+		private void removePointlessExecutionModes() {
+			// TODO iterate through schedule.getJobList(), find pointless
+			// ExecutionModes
+			// and delete them both from the job and from
+			// schedule.getExecutionModeList()
+		}
+
+		private void createAllocationList() {
+			List<Job> jobList = schedule.getJobList();
+			List<Allocation> allocationList = new ArrayList<Allocation>(jobList.size());
+			Map<Job, Allocation> jobToAllocationMap = new HashMap<Job, Allocation>(jobList.size());
+			Map<Project, Allocation> projectToSourceAllocationMap = new HashMap<Project, Allocation>(projectListSize);
+			Map<Project, Allocation> projectToSinkAllocationMap = new HashMap<Project, Allocation>(projectListSize);
+			for (Job job : jobList) {
+				Allocation allocation = new Allocation();
+				allocation.setId(job.getId());
+				allocation.setJob(job);
+				allocation.setPredecessorAllocationList(new ArrayList<Allocation>(job.getSuccessorJobList().size()));
+				allocation.setSuccessorAllocationList(new ArrayList<Allocation>(job.getSuccessorJobList().size()));
+				// Uninitialized allocations take no time, but don't break the
+				// predecessorsDoneDate cascade to sink.
+				allocation.setPredecessorsDoneDate(job.getProject().getReleaseDate());
+				if (job.getJobType() == JobType.SOURCE) {
+					allocation.setDelay(0);
+					if (job.getExecutionModeList().size() != 1) {
+						throw new IllegalArgumentException("The job (" + job + ")'s executionModeList ("
+								+ job.getExecutionModeList() + ") is expected to be a singleton.");
+					}
+					allocation.setExecutionMode(job.getExecutionModeList().get(0));
+					projectToSourceAllocationMap.put(job.getProject(), allocation);
+				} else if (job.getJobType() == JobType.SINK) {
+					allocation.setDelay(0);
+					if (job.getExecutionModeList().size() != 1) {
+						throw new IllegalArgumentException("The job (" + job + ")'s executionModeList ("
+								+ job.getExecutionModeList() + ") is expected to be a singleton.");
+					}
+					allocation.setExecutionMode(job.getExecutionModeList().get(0));
+					projectToSinkAllocationMap.put(job.getProject(), allocation);
+				}
+				allocationList.add(allocation);
+				jobToAllocationMap.put(job, allocation);
+			}
+			for (Allocation allocation : allocationList) {
+				Job job = allocation.getJob();
+				allocation.setSourceAllocation(projectToSourceAllocationMap.get(job.getProject()));
+				allocation.setSinkAllocation(projectToSinkAllocationMap.get(job.getProject()));
+				for (Job successorJob : job.getSuccessorJobList()) {
+					Allocation successorAllocation = jobToAllocationMap.get(successorJob);
+					allocation.getSuccessorAllocationList().add(successorAllocation);
+					successorAllocation.getPredecessorAllocationList().add(allocation);
+				}
+			}
+			for (Allocation sourceAllocation : projectToSourceAllocationMap.values()) {
+				for (Allocation allocation : sourceAllocation.getSuccessorAllocationList()) {
+					allocation.setPredecessorsDoneDate(sourceAllocation.getEndDate());
+				}
+			}
+			schedule.setAllocationList(allocationList);
+		}
+
+	}
 
 }
