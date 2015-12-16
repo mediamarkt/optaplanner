@@ -31,6 +31,7 @@ public class Job extends AbstractPersistable {
     private ClockingSide clockingSide;
 
     private List<Job> successorJobList;
+	private boolean priority = false;
 
     
     public ClockingSide getClockingSide() {
@@ -81,6 +82,15 @@ public class Job extends AbstractPersistable {
     public void setSuccessorJobList(List<Job> successorJobList) {
         this.successorJobList = successorJobList;
     }
+
+	public void setPriorityMark() {
+		this.priority = true;
+	}
+	
+	public boolean getPriroityMark()
+	{
+		return this.priority;
+	}
 
 
     // ************************************************************************

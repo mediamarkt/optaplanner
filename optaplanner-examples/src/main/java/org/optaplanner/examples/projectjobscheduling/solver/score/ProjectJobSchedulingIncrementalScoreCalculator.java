@@ -41,10 +41,11 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
     private Map<Project, Integer> projectEndDateMap;
     private int maximumProjectEndDate;
 
-    private int hardScore;
-    private int soft0Score;
-    private int soft1Score;
-    private int soft2Score;
+    private int resourceCapcityViolations;
+    private int totalProjectDelay;
+    private int totalMakeSpan;
+    private int totalClockedDelay;
+    private int priorityJobsDelay;
 
 
     public void resetWorkingSolution(Schedule schedule) {
@@ -58,15 +59,16 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
         List<Project> projectList = schedule.getProjectList();
         projectEndDateMap = new HashMap<Project, Integer>(projectList.size());
         maximumProjectEndDate = 0;
-        hardScore = 0;
-        soft0Score = 0;
-        soft1Score = 0;
-        soft2Score = 0;
+        resourceCapcityViolations = 0;
+        totalProjectDelay = 0;
+        totalMakeSpan = 0;
+        totalClockedDelay = 0;
+        priorityJobsDelay = 0;
         int minimumReleaseDate = Integer.MAX_VALUE;
         for (Project p: projectList) {
             minimumReleaseDate = Math.min(p.getReleaseDate(), minimumReleaseDate);
         }
-        soft1Score += minimumReleaseDate;
+        totalMakeSpan += minimumReleaseDate;
         for (Allocation allocation : schedule.getAllocationList()) {
             insert(allocation);
         }
@@ -104,9 +106,9 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
             for (ResourceRequirement resourceRequirement : executionMode.getResourceRequirementList()) {
                 ResourceCapacityTracker tracker = resourceCapacityTrackerMap.get(
                         resourceRequirement.getResource());
-                hardScore -= tracker.getHardScore();
+                resourceCapcityViolations -= tracker.getHardScore();
                 tracker.insert(resourceRequirement, allocation);
-                hardScore += tracker.getHardScore();
+                resourceCapcityViolations += tracker.getHardScore();
             }
         }
         // Total project delay and total make span
@@ -116,10 +118,10 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
                 Project project = allocation.getProject();
                 projectEndDateMap.put(project, endDate);
                 // Total project delay
-                soft0Score -= endDate - project.getCriticalPathEndDate();
+                totalProjectDelay -= endDate - project.getCriticalPathEndDate();
                 // Total make span
                 if (endDate > maximumProjectEndDate) {
-                    soft1Score -= endDate - maximumProjectEndDate;
+                    totalMakeSpan -= endDate - maximumProjectEndDate;
                     maximumProjectEndDate = endDate;
                 }
             }
@@ -128,15 +130,20 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
         //Total clocked delay
         if (allocation.getJob().getClockingSide() == ClockingSide.START)
         {
-        	soft2Score += allocation.getStartDate();// - allocation.getJob().getClock(); 
+        	totalClockedDelay += allocation.getStartDate();// - allocation.getJob().getClock(); 
         	//allocation.getJob().setClock(allocation.getStartDate());
         	 
         	
         }
         if (allocation.getJob().getClockingSide() == ClockingSide.END)
         {
-        	soft2Score -= allocation.getEndDate(); //allocation.getJob().getClock();//  
+        	totalClockedDelay -= allocation.getEndDate(); //allocation.getJob().getClock();//  
         	//allocation.getJob().setClock(allocation.getEndDate());
+        }
+        
+        //Priority jobs delay
+        if (allocation.getJob().getPriroityMark()){
+        	priorityJobsDelay -= allocation.getEndDate(); 
         }
     }
 
@@ -148,9 +155,9 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
             for (ResourceRequirement resourceRequirement : executionMode.getResourceRequirementList()) {
                 ResourceCapacityTracker tracker = resourceCapacityTrackerMap.get(
                         resourceRequirement.getResource());
-                hardScore -= tracker.getHardScore();
+                resourceCapcityViolations -= tracker.getHardScore();
                 tracker.retract(resourceRequirement, allocation);
-                hardScore += tracker.getHardScore();
+                resourceCapcityViolations += tracker.getHardScore();
             }
         }
         // Total project delay and total make span
@@ -160,11 +167,11 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
                 Project project = allocation.getProject();
                 projectEndDateMap.remove(project);
                 // Total project delay
-                soft0Score += endDate - project.getCriticalPathEndDate();
+                totalProjectDelay += endDate - project.getCriticalPathEndDate();
                 // Total make span
                 if (endDate == maximumProjectEndDate) {
                     updateMaximumProjectEndDate();
-                    soft1Score += endDate - maximumProjectEndDate;
+                    totalMakeSpan += endDate - maximumProjectEndDate;
                 }
             }
         }
@@ -172,16 +179,21 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
       //Total clocked delay
         if (allocation.getJob().getClockingSide() == ClockingSide.START)
         {
-        	soft2Score -= allocation.getStartDate();// - allocation.getJob().getClock(); 
+        	totalClockedDelay -= allocation.getStartDate();// - allocation.getJob().getClock(); 
         	//allocation.getJob().setClock(allocation.getStartDate());
         	 
         	
         }
         if (allocation.getJob().getClockingSide() == ClockingSide.END)
         {
-        	soft2Score += allocation.getEndDate(); //allocation.getJob().getClock(); 
+        	totalClockedDelay += allocation.getEndDate(); //allocation.getJob().getClock(); 
         	//allocation.getJob().setClock(allocation.getEndDate());
         }
+        
+        //Priority jobs delay
+        if (allocation.getJob().getPriroityMark()){
+        	priorityJobsDelay += allocation.getEndDate();	
+        } 
     }
 
     private void updateMaximumProjectEndDate() {
@@ -195,7 +207,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
     }
 
     public Score calculateScore() {
-        return BendableScore.valueOf(new int[] {hardScore}, new int[] {soft0Score, soft1Score, soft2Score});
+        return BendableScore.valueOf(new int[] {resourceCapcityViolations}, new int[] {totalProjectDelay, totalMakeSpan, priorityJobsDelay, totalClockedDelay});
     }
 
 }

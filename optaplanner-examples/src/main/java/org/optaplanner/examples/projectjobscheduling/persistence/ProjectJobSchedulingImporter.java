@@ -61,8 +61,8 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 
 		@Override
 		public Solution readSolution() throws IOException {
-			int marketsCount = readIntegerValue("Total markers: ");
-			for (int i = 0; i < marketsCount; i++) {
+			int markersCount = readIntegerValue("Total markers: ");
+			for (int i = 0; i < markersCount; i++) {
 				String[] tokens = splitBySpacesOrTabs(readStringValue());
 				this.schedule.getJobList()
 					.stream()
@@ -72,6 +72,28 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				.stream()
 				.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[2]))
 				.forEach(fj -> fj.setClockingSide(ClockingSide.END));
+			}
+			return null;
+		}
+
+	}
+
+	public static class PrioritiesFileInputBuilder extends TxtInputBuilder {
+		private Schedule schedule;
+
+		public PrioritiesFileInputBuilder(Schedule schedule) {
+			this.schedule = schedule;
+		}
+
+		@Override
+		public Solution readSolution() throws IOException {
+			int prioritiesCount = readIntegerValue("Total priority jobs: ");
+			for (int i = 0; i < prioritiesCount; i++) {
+				int priorityJobId = readIntegerValue();
+				this.schedule.getJobList()
+					.stream()
+					.filter(j -> j.getOriginalJobId() == priorityJobId)
+					.forEach(j -> j.setPriorityMark());
 			}
 			return null;
 		}
@@ -115,6 +137,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				readProjectFile(entry.getKey(), entry.getValue());
 			}
 			readClockingMarkers();
+			readPriorities();
 			removePointlessExecutionModes();
 			createAllocationList();
 			logger.info(
@@ -126,6 +149,41 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			return schedule;
 		}
 
+		private void readPriorities() {
+			String prioritiesFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
+					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "prio";
+			File prioritiesFile = new File(prioritiesFilePath);
+			if (!prioritiesFile.exists()) {
+				logger.warn("The expected priorities marks file (" + prioritiesFilePath
+						+ ") does not exist. Proceeding without clock marks.");
+				return;
+			}
+			BufferedReader bufferedReader = null;
+			try {
+				bufferedReader = new BufferedReader(
+						new InputStreamReader(new FileInputStream(prioritiesFile), "UTF-8"));
+
+				PrioritiesFileInputBuilder prioritiesFileInputBuilder = new PrioritiesFileInputBuilder(schedule);
+				prioritiesFileInputBuilder.setInputFile(prioritiesFile);
+				prioritiesFileInputBuilder.setBufferedReader(bufferedReader);
+				try {
+					prioritiesFileInputBuilder.readSolution();
+				} catch (IllegalArgumentException e) {
+					throw new IllegalArgumentException("Exception in priorities file (" + prioritiesFilePath + ")",
+							e);
+				} catch (IllegalStateException e) {
+					throw new IllegalStateException(
+							"Exception in priorities file (" + prioritiesFilePath + ")", e);
+				}
+			} catch (IOException e) {
+				throw new IllegalArgumentException("Could not read the priorities file (" + prioritiesFilePath + ")",
+						e);
+			} finally {
+				IOUtils.closeQuietly(bufferedReader);
+			}
+
+		}
+		
 		private void readClockingMarkers() {
 			String clockMarkersFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
 					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "clocks";
@@ -150,7 +208,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 							e);
 				} catch (IllegalStateException e) {
 					throw new IllegalStateException(
-							"Exception in projectFile clock marks file (" + clockMarkersFilePath + ")", e);
+							"Exception in clock marks file (" + clockMarkersFilePath + ")", e);
 				}
 			} catch (IOException e) {
 				throw new IllegalArgumentException("Could not read the clock marks file (" + clockMarkersFilePath + ")",
