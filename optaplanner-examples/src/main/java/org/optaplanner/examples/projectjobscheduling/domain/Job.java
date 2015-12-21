@@ -28,21 +28,30 @@ public class Job extends AbstractPersistable {
     private JobType jobType;
     private int originalJobId;
     private List<ExecutionMode> executionModeList;
-    private ClockingSide clockingSide;
+    private int clockingStartMarks = 0;
+    private int clockingEndMarks = 0;
 
     private List<Job> successorJobList;
 	private boolean priority = false;
 
     
-    public ClockingSide getClockingSide() {
-    	return clockingSide;
+    public int getClockingStartMarks() {
+    	return clockingStartMarks;
     }
     
-    public void setClockingSide(ClockingSide clockingSide)
+    public void incrementClockingStartMarks()
     {
-    	this.clockingSide = clockingSide;
+    	this.clockingStartMarks++;
     }
  
+    public int getClockingEndMarks() {
+    	return clockingEndMarks;
+    }
+    
+    public void incrementClockingEndMarks()
+    {
+    	this.clockingEndMarks++;
+    }
     
     public Project getProject() {
         return project;

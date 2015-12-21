@@ -24,7 +24,6 @@ import org.optaplanner.core.api.score.Score;
 import org.optaplanner.core.api.score.buildin.bendable.BendableScore;
 import org.optaplanner.core.impl.score.director.incremental.AbstractIncrementalScoreCalculator;
 import org.optaplanner.examples.projectjobscheduling.domain.Allocation;
-import org.optaplanner.examples.projectjobscheduling.domain.ClockingSide;
 import org.optaplanner.examples.projectjobscheduling.domain.ExecutionMode;
 import org.optaplanner.examples.projectjobscheduling.domain.JobType;
 import org.optaplanner.examples.projectjobscheduling.domain.Project;
@@ -128,16 +127,16 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
         }
         
         //Total clocked delay
-        if (allocation.getJob().getClockingSide() == ClockingSide.START)
+        if (allocation.getJob().getClockingStartMarks() != 0)
         {
-        	totalClockedDelay += allocation.getStartDate();// - allocation.getJob().getClock(); 
+        	totalClockedDelay += allocation.getStartDate() * allocation.getJob().getClockingStartMarks();// - allocation.getJob().getClock(); 
         	//allocation.getJob().setClock(allocation.getStartDate());
         	 
         	
         }
-        if (allocation.getJob().getClockingSide() == ClockingSide.END)
+        if (allocation.getJob().getClockingEndMarks() != 0)
         {
-        	totalClockedDelay -= allocation.getEndDate(); //allocation.getJob().getClock();//  
+        	totalClockedDelay -= allocation.getEndDate() * allocation.getJob().getClockingEndMarks(); //allocation.getJob().getClock();//  
         	//allocation.getJob().setClock(allocation.getEndDate());
         }
         
@@ -177,16 +176,16 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
         }
         
       //Total clocked delay
-        if (allocation.getJob().getClockingSide() == ClockingSide.START)
+        if (allocation.getJob().getClockingStartMarks() != 0)
         {
-        	totalClockedDelay -= allocation.getStartDate();// - allocation.getJob().getClock(); 
+        	totalClockedDelay -= allocation.getStartDate() * allocation.getJob().getClockingStartMarks();// - allocation.getJob().getClock(); 
         	//allocation.getJob().setClock(allocation.getStartDate());
         	 
         	
         }
-        if (allocation.getJob().getClockingSide() == ClockingSide.END)
+        if (allocation.getJob().getClockingEndMarks() != 0)
         {
-        	totalClockedDelay += allocation.getEndDate(); //allocation.getJob().getClock(); 
+        	totalClockedDelay += allocation.getEndDate()* allocation.getJob().getClockingEndMarks(); //allocation.getJob().getClock(); 
         	//allocation.getJob().setClock(allocation.getEndDate());
         }
         

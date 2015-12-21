@@ -38,7 +38,6 @@ import org.optaplanner.core.api.domain.solution.Solution;
 import org.optaplanner.examples.common.persistence.AbstractTxtSolutionImporter;
 import org.optaplanner.examples.common.persistence.AbstractTxtSolutionImporter.TxtInputBuilder;
 import org.optaplanner.examples.projectjobscheduling.domain.Allocation;
-import org.optaplanner.examples.projectjobscheduling.domain.ClockingSide;
 import org.optaplanner.examples.projectjobscheduling.domain.ExecutionMode;
 import org.optaplanner.examples.projectjobscheduling.domain.Job;
 import org.optaplanner.examples.projectjobscheduling.domain.JobType;
@@ -67,11 +66,11 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				this.schedule.getJobList()
 					.stream()
 					.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[1]))
-					.forEach(fj -> fj.setClockingSide(ClockingSide.START));
+					.forEach(fj -> fj.incrementClockingStartMarks());
 				this.schedule.getJobList()
 				.stream()
 				.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[2]))
-				.forEach(fj -> fj.setClockingSide(ClockingSide.END));
+				.forEach(fj -> fj.incrementClockingEndMarks());
 			}
 			return null;
 		}
