@@ -44,7 +44,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
     private int totalProjectDelay;
     private int totalMakeSpan;
     private int totalClockedDelay;
-    private int priorityJobsDelay;
+    private HashMap<String, Integer> priorityJobDelays;
 
 
     public void resetWorkingSolution(Schedule schedule) {
@@ -62,7 +62,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
         totalProjectDelay = 0;
         totalMakeSpan = 0;
         totalClockedDelay = 0;
-        priorityJobsDelay = 0;
+        priorityJobDelays = new HashMap();
         int minimumReleaseDate = Integer.MAX_VALUE;
         for (Project p: projectList) {
             minimumReleaseDate = Math.min(p.getReleaseDate(), minimumReleaseDate);
@@ -141,8 +141,12 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
         }
         
         //Priority jobs delay
-        if (allocation.getJob().getPriroityMark()){
-        	priorityJobsDelay -= allocation.getEndDate(); 
+        if (allocation.getJob().getPriroityMark() != null){
+        	if (!priorityJobDelays.containsKey(allocation.getJob().getPriroityMark()))
+        	{
+        		priorityJobDelays.put(allocation.getJob().getPriroityMark(), 0);
+        	}
+        	priorityJobDelays.compute(allocation.getJob().getPriroityMark(),  (a, b) -> b - allocation.getEndDate()); 
         }
     }
 
@@ -190,8 +194,12 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
         }
         
         //Priority jobs delay
-        if (allocation.getJob().getPriroityMark()){
-        	priorityJobsDelay += allocation.getEndDate();	
+        if (allocation.getJob().getPriroityMark() != null){
+        	if (!priorityJobDelays.containsKey(allocation.getJob().getPriroityMark()))
+        	{
+        		priorityJobDelays.put(allocation.getJob().getPriroityMark(), 0);
+        	}
+        	priorityJobDelays.compute(allocation.getJob().getPriroityMark(),  (a, b) -> b + allocation.getEndDate()); 
         } 
     }
 
@@ -206,7 +214,16 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
     }
 
     public Score calculateScore() {
-        return BendableScore.valueOf(new int[] {resourceCapcityViolations}, new int[] {totalProjectDelay, totalMakeSpan, priorityJobsDelay, totalClockedDelay});
+        return BendableScore.valueOf(
+        		new int[] {resourceCapcityViolations},
+        		new int[] {
+        				totalProjectDelay,
+        				totalMakeSpan,
+        				(priorityJobDelays.containsKey("Blocker") ? priorityJobDelays.get("Blocker") : 0)
+        						+ (priorityJobDelays.containsKey("Critical") ? priorityJobDelays.get("Critical") : 0),
+        				priorityJobDelays.containsKey("Major") ? priorityJobDelays.get("Major") : 0,
+        				totalClockedDelay
+        				});
     }
 
 }

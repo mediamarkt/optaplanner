@@ -32,7 +32,7 @@ public class Job extends AbstractPersistable {
     private int clockingEndMarks = 0;
 
     private List<Job> successorJobList;
-	private boolean priority = false;
+	private String priority;
 
     
     public int getClockingStartMarks() {
@@ -92,11 +92,11 @@ public class Job extends AbstractPersistable {
         this.successorJobList = successorJobList;
     }
 
-	public void setPriorityMark() {
-		this.priority = true;
+	public void setPriorityMark(String priority) {
+		this.priority = priority;
 	}
 	
-	public boolean getPriroityMark()
+	public String getPriroityMark()
 	{
 		return this.priority;
 	}

@@ -88,11 +88,13 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 		public Solution readSolution() throws IOException {
 			int prioritiesCount = readIntegerValue("Total priority jobs: ");
 			for (int i = 0; i < prioritiesCount; i++) {
-				int priorityJobId = readIntegerValue();
+				String[] tokens = splitBySpacesOrTabs(readStringValue());
+				int priorityJobId = Integer.parseInt(tokens[0]);
+				String priorityName = tokens[1];
 				this.schedule.getJobList()
 					.stream()
 					.filter(j -> j.getOriginalJobId() == priorityJobId)
-					.forEach(j -> j.setPriorityMark());
+					.forEach(j -> j.setPriorityMark(priorityName));
 			}
 			return null;
 		}
