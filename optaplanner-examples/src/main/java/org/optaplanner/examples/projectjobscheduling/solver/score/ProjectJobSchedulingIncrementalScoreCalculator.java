@@ -36,204 +36,194 @@ import org.optaplanner.examples.projectjobscheduling.solver.score.capacity.Resou
 
 public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncrementalScoreCalculator<Schedule> {
 
-    private Map<Resource, ResourceCapacityTracker> resourceCapacityTrackerMap;
-    private Map<Project, Integer> projectEndDateMap;
-    private int maximumProjectEndDate;
+	private Map<Resource, ResourceCapacityTracker> resourceCapacityTrackerMap;
+	private Map<Project, Integer> projectEndDateMap;
+	private int maximumProjectEndDate;
 
-    private int resourceCapcityViolations;
-    private int totalProjectDelay;
-    private int totalJobDelay;
-    private int totalMakeSpan;
-    private int totalClockedDelay;
-    private HashMap<String, Integer> priorityJobDelays;
+	private int resourceCapcityViolations;
+	private int totalProjectDelay;
+	private int totalJobDelay;
+	private int totalMakeSpan;
+	private int totalClockedDelay;
+	private HashMap<String, Integer> priorityJobDelays;
 
+	public void resetWorkingSolution(Schedule schedule) {
+		List<Resource> resourceList = schedule.getResourceList();
+		resourceCapacityTrackerMap = new HashMap<Resource, ResourceCapacityTracker>(resourceList.size());
+		for (Resource resource : resourceList) {
+			resourceCapacityTrackerMap.put(resource,
+					resource.isRenewable() ? new RenewableResourceCapacityTracker(resource)
+							: new NonrenewableResourceCapacityTracker(resource));
+		}
+		List<Project> projectList = schedule.getProjectList();
+		projectEndDateMap = new HashMap<Project, Integer>(projectList.size());
+		maximumProjectEndDate = 0;
+		resourceCapcityViolations = 0;
+		totalProjectDelay = 0;
+		totalJobDelay = 0;
+		totalMakeSpan = 0;
+		totalClockedDelay = 0;
+		priorityJobDelays = new HashMap();
+		int minimumReleaseDate = Integer.MAX_VALUE;
+		for (Project p : projectList) {
+			minimumReleaseDate = Math.min(p.getReleaseDate(), minimumReleaseDate);
+		}
+		totalMakeSpan += minimumReleaseDate;
+		for (Allocation allocation : schedule.getAllocationList()) {
+			insert(allocation);
+		}
+	}
 
-    public void resetWorkingSolution(Schedule schedule) {
-        List<Resource> resourceList = schedule.getResourceList();
-        resourceCapacityTrackerMap = new HashMap<Resource, ResourceCapacityTracker>(resourceList.size());
-        for (Resource resource : resourceList) {
-            resourceCapacityTrackerMap.put(resource, resource.isRenewable()
-                    ? new RenewableResourceCapacityTracker(resource)
-                    : new NonrenewableResourceCapacityTracker(resource));
-        }
-        List<Project> projectList = schedule.getProjectList();
-        projectEndDateMap = new HashMap<Project, Integer>(projectList.size());
-        maximumProjectEndDate = 0;
-        resourceCapcityViolations = 0;
-        totalProjectDelay = 0;
-        totalJobDelay = 0;
-        totalMakeSpan = 0;
-        totalClockedDelay = 0;
-        priorityJobDelays = new HashMap();
-        int minimumReleaseDate = Integer.MAX_VALUE;
-        for (Project p: projectList) {
-            minimumReleaseDate = Math.min(p.getReleaseDate(), minimumReleaseDate);
-        }
-        totalMakeSpan += minimumReleaseDate;
-        for (Allocation allocation : schedule.getAllocationList()) {
-            insert(allocation);
-        }
-    }
+	public void beforeEntityAdded(Object entity) {
+		// Do nothing
+	}
 
-    public void beforeEntityAdded(Object entity) {
-        // Do nothing
-    }
+	public void afterEntityAdded(Object entity) {
+		insert((Allocation) entity);
+	}
 
-    public void afterEntityAdded(Object entity) {
-        insert((Allocation) entity);
-    }
+	public void beforeVariableChanged(Object entity, String variableName) {
+		retract((Allocation) entity);
+	}
 
-    public void beforeVariableChanged(Object entity, String variableName) {
-        retract((Allocation) entity);
-    }
+	public void afterVariableChanged(Object entity, String variableName) {
+		insert((Allocation) entity);
+	}
 
-    public void afterVariableChanged(Object entity, String variableName) {
-        insert((Allocation) entity);
-    }
+	public void beforeEntityRemoved(Object entity) {
+		retract((Allocation) entity);
+	}
 
-    public void beforeEntityRemoved(Object entity) {
-        retract((Allocation) entity);
-    }
+	public void afterEntityRemoved(Object entity) {
+		// Do nothing
+	}
 
-    public void afterEntityRemoved(Object entity) {
-        // Do nothing
-    }
+	private void insert(Allocation allocation) {
+		// Job precedence is build-in
+		// Resource capacity
+		ExecutionMode executionMode = allocation.getExecutionMode();
+		if (executionMode != null && allocation.getJob().getJobType() == JobType.STANDARD) {
+			for (ResourceRequirement resourceRequirement : executionMode.getResourceRequirementList()) {
+				ResourceCapacityTracker tracker = resourceCapacityTrackerMap.get(resourceRequirement.getResource());
+				resourceCapcityViolations -= tracker.getHardScore();
+				tracker.insert(resourceRequirement, allocation);
+				resourceCapcityViolations += tracker.getHardScore();
+			}
+		}
+		// Total project delay and total make span
+		if (allocation.getJob().getJobType() == JobType.SINK) {
+			Integer endDate = allocation.getEndDate();
+			if (endDate != null) {
+				Project project = allocation.getProject();
+				projectEndDateMap.put(project, endDate);
+				// Total project delay
+				totalProjectDelay -= endDate - project.getCriticalPathEndDate();
+				// Total make span
+				if (endDate > maximumProjectEndDate) {
+					totalMakeSpan -= endDate - maximumProjectEndDate;
+					maximumProjectEndDate = endDate;
+				}
+			}
+		}
 
-    private void insert(Allocation allocation) {
-        // Job precedence is build-in
-        // Resource capacity
-        ExecutionMode executionMode = allocation.getExecutionMode();
-        if (executionMode != null && allocation.getJob().getJobType() == JobType.STANDARD) {
-            for (ResourceRequirement resourceRequirement : executionMode.getResourceRequirementList()) {
-                ResourceCapacityTracker tracker = resourceCapacityTrackerMap.get(
-                        resourceRequirement.getResource());
-                resourceCapcityViolations -= tracker.getHardScore();
-                tracker.insert(resourceRequirement, allocation);
-                resourceCapcityViolations += tracker.getHardScore();
-            }
-        }
-        // Total project delay and total make span
-        if (allocation.getJob().getJobType() == JobType.SINK) {
-            Integer endDate = allocation.getEndDate();
-            if (endDate != null) {
-                Project project = allocation.getProject();
-                projectEndDateMap.put(project, endDate);
-                // Total project delay
-                totalProjectDelay -= endDate - project.getCriticalPathEndDate();
-                // Total make span
-                if (endDate > maximumProjectEndDate) {
-                    totalMakeSpan -= endDate - maximumProjectEndDate;
-                    maximumProjectEndDate = endDate;
-                }
-            }
-        }
+		// Total job delay
+		if (allocation.getJob().getJobType() == JobType.STANDARD) {
+			totalJobDelay -= allocation.getDelay() == null ? 0 : allocation.getDelay();
+		}
 
-        //Total job delay
-        totalJobDelay -= allocation.getDelay() == null ? 0 : allocation.getDelay();
-        
-        //Total clocked delay
-        if (allocation.getJob().getClockingStartMarks() != 0)
-        {
-        	totalClockedDelay += allocation.getStartDate() * allocation.getJob().getClockingStartMarks();// - allocation.getJob().getClock(); 
-        	//allocation.getJob().setClock(allocation.getStartDate());
-        	 
-        	
-        }
-        if (allocation.getJob().getClockingEndMarks() != 0)
-        {
-        	totalClockedDelay -= allocation.getEndDate() * allocation.getJob().getClockingEndMarks(); //allocation.getJob().getClock();//  
-        	//allocation.getJob().setClock(allocation.getEndDate());
-        }
-        
-        //Priority jobs delay
-        if (allocation.getJob().getPriroityMark() != null){
-        	if (!priorityJobDelays.containsKey(allocation.getJob().getPriroityMark()))
-        	{
-        		priorityJobDelays.put(allocation.getJob().getPriroityMark(), 0);
-        	}
-        	priorityJobDelays.compute(allocation.getJob().getPriroityMark(),  (a, b) -> b - allocation.getEndDate()); 
-        }
-    }
+		// Total clocked delay
+		if (allocation.getJob().getClockingStartMarks() != 0) {
+			totalClockedDelay += allocation.getStartDate() * allocation.getJob().getClockingStartMarks();// -
+																											// allocation.getJob().getClock();
+			// allocation.getJob().setClock(allocation.getStartDate());
 
-    private void retract(Allocation allocation) {
-        // Job precedence is build-in
-        // Resource capacity
-        ExecutionMode executionMode = allocation.getExecutionMode();
-        if (executionMode != null && allocation.getJob().getJobType() == JobType.STANDARD) {
-            for (ResourceRequirement resourceRequirement : executionMode.getResourceRequirementList()) {
-                ResourceCapacityTracker tracker = resourceCapacityTrackerMap.get(
-                        resourceRequirement.getResource());
-                resourceCapcityViolations -= tracker.getHardScore();
-                tracker.retract(resourceRequirement, allocation);
-                resourceCapcityViolations += tracker.getHardScore();
-            }
-        }
-        // Total project delay and total make span
-        if (allocation.getJob().getJobType() == JobType.SINK) {
-            Integer endDate = allocation.getEndDate();
-            if (endDate != null) {
-                Project project = allocation.getProject();
-                projectEndDateMap.remove(project);
-                // Total project delay
-                totalProjectDelay += endDate - project.getCriticalPathEndDate();
-                // Total make span
-                if (endDate == maximumProjectEndDate) {
-                    updateMaximumProjectEndDate();
-                    totalMakeSpan += endDate - maximumProjectEndDate;
-                }
-            }
-        }
-        
-        //Total job delay
-        totalJobDelay += allocation.getDelay() == null ? 0 : allocation.getDelay();
-        
-        
-      //Total clocked delay
-        if (allocation.getJob().getClockingStartMarks() != 0)
-        {
-        	totalClockedDelay -= allocation.getStartDate() * allocation.getJob().getClockingStartMarks();// - allocation.getJob().getClock(); 
-        	//allocation.getJob().setClock(allocation.getStartDate());
-        	 
-        	
-        }
-        if (allocation.getJob().getClockingEndMarks() != 0)
-        {
-        	totalClockedDelay += allocation.getEndDate()* allocation.getJob().getClockingEndMarks(); //allocation.getJob().getClock(); 
-        	//allocation.getJob().setClock(allocation.getEndDate());
-        }
-        
-        //Priority jobs delay
-        if (allocation.getJob().getPriroityMark() != null){
-        	if (!priorityJobDelays.containsKey(allocation.getJob().getPriroityMark()))
-        	{
-        		priorityJobDelays.put(allocation.getJob().getPriroityMark(), 0);
-        	}
-        	priorityJobDelays.compute(allocation.getJob().getPriroityMark(),  (a, b) -> b + allocation.getEndDate()); 
-        } 
-    }
+		}
+		if (allocation.getJob().getClockingEndMarks() != 0) {
+			totalClockedDelay -= allocation.getEndDate() * allocation.getJob().getClockingEndMarks(); // allocation.getJob().getClock();//
+			// allocation.getJob().setClock(allocation.getEndDate());
+		}
 
-    private void updateMaximumProjectEndDate() {
-        int maximum = 0;
-        for (Integer endDate : projectEndDateMap.values()) {
-            if (endDate > maximum) {
-                maximum = endDate;
-            }
-        }
-        maximumProjectEndDate = maximum;
-    }
+		// Priority jobs delay
+		if (allocation.getJob().getPriroityMark() != null) {
+			if (!priorityJobDelays.containsKey(allocation.getJob().getPriroityMark())) {
+				priorityJobDelays.put(allocation.getJob().getPriroityMark(), 0);
+			}
+			priorityJobDelays.compute(allocation.getJob().getPriroityMark(), (a, b) -> b - allocation.getEndDate());
+		}
+	}
 
-    public Score calculateScore() {
-        return BendableScore.valueOf(
-        		new int[] {resourceCapcityViolations},
-        		new int[] {
-        				(priorityJobDelays.containsKey("Blocker") ? priorityJobDelays.get("Blocker") : 0)
-        						+ (priorityJobDelays.containsKey("Critical") ? priorityJobDelays.get("Critical") : 0),
-        						totalProjectDelay,
-                				totalMakeSpan,
-        				priorityJobDelays.containsKey("Major") ? priorityJobDelays.get("Major") : 0,
-        				totalClockedDelay,
-        				totalJobDelay
-        				});
-    }
+	private void retract(Allocation allocation) {
+		// Job precedence is build-in
+		// Resource capacity
+		ExecutionMode executionMode = allocation.getExecutionMode();
+		if (executionMode != null && allocation.getJob().getJobType() == JobType.STANDARD) {
+			for (ResourceRequirement resourceRequirement : executionMode.getResourceRequirementList()) {
+				ResourceCapacityTracker tracker = resourceCapacityTrackerMap.get(resourceRequirement.getResource());
+				resourceCapcityViolations -= tracker.getHardScore();
+				tracker.retract(resourceRequirement, allocation);
+				resourceCapcityViolations += tracker.getHardScore();
+			}
+		}
+		// Total project delay and total make span
+		if (allocation.getJob().getJobType() == JobType.SINK) {
+			Integer endDate = allocation.getEndDate();
+			if (endDate != null) {
+				Project project = allocation.getProject();
+				projectEndDateMap.remove(project);
+				// Total project delay
+				totalProjectDelay += endDate - project.getCriticalPathEndDate();
+				// Total make span
+				if (endDate == maximumProjectEndDate) {
+					updateMaximumProjectEndDate();
+					totalMakeSpan += endDate - maximumProjectEndDate;
+				}
+			}
+		}
+
+		// Total job delay
+		if (allocation.getJob().getJobType() == JobType.STANDARD) {
+			totalJobDelay += allocation.getDelay() == null ? 0 : allocation.getDelay();
+		}
+
+		// Total clocked delay
+		if (allocation.getJob().getClockingStartMarks() != 0) {
+			totalClockedDelay -= allocation.getStartDate() * allocation.getJob().getClockingStartMarks();// -
+																											// allocation.getJob().getClock();
+			// allocation.getJob().setClock(allocation.getStartDate());
+
+		}
+		if (allocation.getJob().getClockingEndMarks() != 0) {
+			totalClockedDelay += allocation.getEndDate() * allocation.getJob().getClockingEndMarks(); // allocation.getJob().getClock();
+			// allocation.getJob().setClock(allocation.getEndDate());
+		}
+
+		// Priority jobs delay
+		if (allocation.getJob().getPriroityMark() != null) {
+			if (!priorityJobDelays.containsKey(allocation.getJob().getPriroityMark())) {
+				priorityJobDelays.put(allocation.getJob().getPriroityMark(), 0);
+			}
+			priorityJobDelays.compute(allocation.getJob().getPriroityMark(), (a, b) -> b + allocation.getEndDate());
+		}
+	}
+
+	private void updateMaximumProjectEndDate() {
+		int maximum = 0;
+		for (Integer endDate : projectEndDateMap.values()) {
+			if (endDate > maximum) {
+				maximum = endDate;
+			}
+		}
+		maximumProjectEndDate = maximum;
+	}
+
+	public Score calculateScore() {
+		return BendableScore.valueOf(new int[] { resourceCapcityViolations },
+				new int[] {
+						(priorityJobDelays.containsKey("Blocker") ? priorityJobDelays.get("Blocker") : 0)
+								+ (priorityJobDelays.containsKey("Critical") ? priorityJobDelays.get("Critical") : 0),
+						totalProjectDelay, totalMakeSpan,
+						priorityJobDelays.containsKey("Major") ? priorityJobDelays.get("Major") : 0, totalClockedDelay,
+						totalJobDelay });
+	}
 
 }
