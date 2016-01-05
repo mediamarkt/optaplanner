@@ -42,6 +42,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 
     private int resourceCapcityViolations;
     private int totalProjectDelay;
+    private int totalJobDelay;
     private int totalMakeSpan;
     private int totalClockedDelay;
     private HashMap<String, Integer> priorityJobDelays;
@@ -60,6 +61,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
         maximumProjectEndDate = 0;
         resourceCapcityViolations = 0;
         totalProjectDelay = 0;
+        totalJobDelay = 0;
         totalMakeSpan = 0;
         totalClockedDelay = 0;
         priorityJobDelays = new HashMap();
@@ -125,6 +127,9 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
                 }
             }
         }
+
+        //Total job delay
+        totalJobDelay -= allocation.getDelay() == null ? 0 : allocation.getDelay();
         
         //Total clocked delay
         if (allocation.getJob().getClockingStartMarks() != 0)
@@ -179,6 +184,10 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
             }
         }
         
+        //Total job delay
+        totalJobDelay += allocation.getDelay() == null ? 0 : allocation.getDelay();
+        
+        
       //Total clocked delay
         if (allocation.getJob().getClockingStartMarks() != 0)
         {
@@ -217,12 +226,13 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
         return BendableScore.valueOf(
         		new int[] {resourceCapcityViolations},
         		new int[] {
-        				totalProjectDelay,
-        				totalMakeSpan,
         				(priorityJobDelays.containsKey("Blocker") ? priorityJobDelays.get("Blocker") : 0)
         						+ (priorityJobDelays.containsKey("Critical") ? priorityJobDelays.get("Critical") : 0),
+        						totalProjectDelay,
+                				totalMakeSpan,
         				priorityJobDelays.containsKey("Major") ? priorityJobDelays.get("Major") : 0,
-        				totalClockedDelay
+        				totalClockedDelay,
+        				totalJobDelay
         				});
     }
 
