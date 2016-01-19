@@ -33,6 +33,7 @@ public class Job extends AbstractPersistable {
 
     private List<Job> successorJobList;
 	private String priority;
+	private int committedProjectDay;
 
     
     public int getClockingStartMarks() {
@@ -96,9 +97,17 @@ public class Job extends AbstractPersistable {
 		this.priority = priority;
 	}
 	
-	public String getPriroityMark()
+	public String getPriorityMark()
 	{
 		return this.priority;
+	}
+
+	public void setCommittedDay(int committedProjectDay) {
+		this.committedProjectDay = committedProjectDay;
+	}
+	
+	public int getCommittedDay(){
+		return this.committedProjectDay;
 	}
 
 

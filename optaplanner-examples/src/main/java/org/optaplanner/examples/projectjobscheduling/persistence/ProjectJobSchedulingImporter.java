@@ -76,6 +76,30 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 		}
 
 	}
+	
+	public static class CommitmentsFileInputBuilder extends TxtInputBuilder {
+		private Schedule schedule;
+
+		public CommitmentsFileInputBuilder(Schedule schedule) {
+			this.schedule = schedule;
+		}
+
+		@Override
+		public Solution readSolution() throws IOException {
+			int prioritiesCount = readIntegerValue("Total committed dates: ");
+			for (int i = 0; i < prioritiesCount; i++) {
+				String[] tokens = splitBySpacesOrTabs(readStringValue());
+				int committedJobId = Integer.parseInt(tokens[0]);
+				int committedProjectDay = Integer.parseInt(tokens[1]);
+				this.schedule.getJobList()
+					.stream()
+					.filter(j -> j.getOriginalJobId() == committedJobId)
+					.forEach(j -> j.setCommittedDay(committedProjectDay));
+			}
+			return null;
+		}
+
+	}
 
 	public static class PrioritiesFileInputBuilder extends TxtInputBuilder {
 		private Schedule schedule;
@@ -139,6 +163,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			}
 			readClockingMarkers();
 			readPriorities();
+			readCommitments();
 			removePointlessExecutionModes();
 			createAllocationList();
 			logger.info(
@@ -148,6 +173,41 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					schedule.getExecutionModeList().size(), schedule.getResourceList().size(),
 					schedule.getResourceRequirementList().size());
 			return schedule;
+		}
+		
+		private void readCommitments() {
+			String commitmentsFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
+					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "commitments";
+			File commitmentsFile = new File(commitmentsFilePath);
+			if (!commitmentsFile.exists()) {
+				logger.warn("The expected priorities marks file (" + commitmentsFilePath
+						+ ") does not exist. Proceeding without clock marks.");
+				return;
+			}
+			BufferedReader bufferedReader = null;
+			try {
+				bufferedReader = new BufferedReader(
+						new InputStreamReader(new FileInputStream(commitmentsFile), "UTF-8"));
+
+				CommitmentsFileInputBuilder commitmentsFileInputBuilder = new CommitmentsFileInputBuilder(schedule);
+				commitmentsFileInputBuilder.setInputFile(commitmentsFile);
+				commitmentsFileInputBuilder.setBufferedReader(bufferedReader);
+				try {
+					commitmentsFileInputBuilder.readSolution();
+				} catch (IllegalArgumentException e) {
+					throw new IllegalArgumentException("Exception in commitments file (" + commitmentsFilePath + ")",
+							e);
+				} catch (IllegalStateException e) {
+					throw new IllegalStateException(
+							"Exception in commitments file (" + commitmentsFilePath + ")", e);
+				}
+			} catch (IOException e) {
+				throw new IllegalArgumentException("Could not read the commitments file (" + commitmentsFilePath + ")",
+						e);
+			} finally {
+				IOUtils.closeQuietly(bufferedReader);
+			}
+
 		}
 
 		private void readPriorities() {
