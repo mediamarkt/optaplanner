@@ -30,6 +30,7 @@ public class Job extends AbstractPersistable {
     private List<ExecutionMode> executionModeList;
     private int clockingStartMarks = 0;
     private int clockingEndMarks = 0;
+    private int fixedStartDate = 0; 
 
     private List<Job> successorJobList;
 	private String priority;
@@ -52,6 +53,14 @@ public class Job extends AbstractPersistable {
     public void incrementClockingEndMarks()
     {
     	this.clockingEndMarks++;
+    }
+    
+    public int getFixedStartDate() {
+    	return fixedStartDate;
+    }
+    
+    public void setFixedStartDate(int fixedStartDate) {
+    	this.fixedStartDate = fixedStartDate;
     }
     
     public Project getProject() {

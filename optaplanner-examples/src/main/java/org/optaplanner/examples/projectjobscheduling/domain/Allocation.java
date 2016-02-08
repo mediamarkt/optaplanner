@@ -28,10 +28,10 @@ import org.optaplanner.core.api.domain.variable.PlanningVariable;
 import org.optaplanner.examples.common.domain.AbstractPersistable;
 import org.optaplanner.examples.projectjobscheduling.domain.solver.DelayStrengthComparator;
 import org.optaplanner.examples.projectjobscheduling.domain.solver.ExecutionModeStrengthWeightFactory;
-import org.optaplanner.examples.projectjobscheduling.domain.solver.NotSourceOrSinkAllocationFilter;
+import org.optaplanner.examples.projectjobscheduling.domain.solver.NotSourceSinkOrFixedAllocationFilter;
 import org.optaplanner.examples.projectjobscheduling.domain.solver.PredecessorsDoneDateUpdatingVariableListener;
 
-@PlanningEntity(movableEntitySelectionFilter = NotSourceOrSinkAllocationFilter.class)
+@PlanningEntity(movableEntitySelectionFilter = NotSourceSinkOrFixedAllocationFilter.class)
 @XStreamAlias("PjsAllocation")
 public class Allocation extends AbstractPersistable {
 
