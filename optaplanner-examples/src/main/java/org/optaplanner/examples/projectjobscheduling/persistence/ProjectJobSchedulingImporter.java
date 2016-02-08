@@ -141,7 +141,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				int fixedStartDate = Integer.parseInt(tokens[2]);
 				this.schedule.getJobList()
 					.stream()
-					.filter(j -> j.getOriginalJobId() == jobId)
+					.filter(j -> j.getOriginalJobId() == jobId && j.getProject().getId() == 0)
 					.forEach(j -> j.setFixedStartDate(fixedStartDate));
 			}
 			return null;
@@ -674,15 +674,11 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				allocation.setSuccessorAllocationList(new ArrayList<Allocation>(job.getSuccessorJobList().size()));
 				// Uninitialized allocations take no time, but don't break the
 				// predecessorsDoneDate cascade to sink.
+				allocation.setPredecessorsDoneDate(job.getProject().getReleaseDate());
 				
-				
-				if(job.getFixedStartDate() == 0) {
-					allocation.setPredecessorsDoneDate(job.getProject().getReleaseDate());					
-				}
-				else {
-					allocation.setPredecessorsDoneDate(job.getProject().getReleaseDate());
-					//allocation.setDelay(job.getFixedStartDate());//TODO subtract project start date
-					//allocation.setExecutionMode(job.getExecutionModeList().get(0));
+				if(job.getFixedStartDate() != 0) {
+					allocation.setDelay(job.getFixedStartDate());//TODO subtract project start date
+					allocation.setExecutionMode(job.getExecutionModeList().get(0));
 				}
 				
 				if (job.getJobType() == JobType.SOURCE) {
@@ -713,6 +709,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					Allocation successorAllocation = jobToAllocationMap.get(successorJob);
 					allocation.getSuccessorAllocationList().add(successorAllocation);
 					successorAllocation.getPredecessorAllocationList().add(allocation);
+					successorAllocation.setPredecessorsDoneDate(Math.max(allocation.getEndDate(), successorAllocation.getPredecessorsDoneDate()));
 				}
 			}
 			for (Allocation sourceAllocation : projectToSourceAllocationMap.values()) {
