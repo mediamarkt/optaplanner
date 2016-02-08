@@ -150,6 +150,30 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 		}
 
 	}
+	
+	public static class FixedStartDateFileInputBuilder extends TxtInputBuilder {
+		private Schedule schedule;
+		
+		public FixedStartDateFileInputBuilder(Schedule schedule) {
+			this.schedule = schedule;
+		}
+		
+		@Override
+		public Solution readSolution() throws IOException {
+			int fixedJobsCount = readIntegerValue("Total fixed jobs: ");
+			for (int i = 0; i < fixedJobsCount; i++) {
+				String[] tokens = splitBySpacesOrTabs(readStringValue());
+				int jobId = Integer.parseInt(tokens[1]);
+				int fixedStartDate = Integer.parseInt(tokens[2]);
+				this.schedule.getJobList()
+					.stream()
+					.filter(j -> j.getOriginalJobId() == jobId && j.getProject().getId() == 0)
+					.forEach(j -> j.setFixedStartDate(fixedStartDate));
+			}
+			return null;
+		}
+		
+	}
 
 	public static void main(String[] args) {
 		new ProjectJobSchedulingImporter().convertAll();
@@ -343,6 +367,41 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 
 		}
 		
+				
+		private void readFixedStartDates() {
+			String fixedStartDatesFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
+					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "fixeddates";
+			File fixedStartDatesFile = new File(fixedStartDatesFilePath);
+			if (!fixedStartDatesFile.exists()) {
+				logger.warn("The expected fixed jobs file (" + fixedStartDatesFilePath
+						+ ") does not exist. Proceeding without fixed jobs.");
+				return;
+			}
+			BufferedReader bufferedReader = null;
+			try {
+				bufferedReader = new BufferedReader(
+						new InputStreamReader(new FileInputStream(fixedStartDatesFile), "UTF-8"));
+
+				FixedStartDateFileInputBuilder fixedStartDatesFileInputBuilder = new FixedStartDateFileInputBuilder(schedule);
+				fixedStartDatesFileInputBuilder.setInputFile(fixedStartDatesFile);
+				fixedStartDatesFileInputBuilder.setBufferedReader(bufferedReader);
+				try {
+					fixedStartDatesFileInputBuilder.readSolution();
+				} catch (IllegalArgumentException e) {
+					throw new IllegalArgumentException("Exception in fixed jobs file (" + fixedStartDatesFilePath + ")",
+							e);
+				} catch (IllegalStateException e) {
+					throw new IllegalStateException(
+							"Exception in fixed jobs file (" + fixedStartDatesFilePath + ")", e);
+				}
+			} catch (IOException e) {
+				throw new IllegalArgumentException("Could not read the fixed jobs file (" + fixedStartDatesFilePath + ")",
+						e);
+			} finally {
+				IOUtils.closeQuietly(bufferedReader);
+			}
+
+		}
 		
 		private void readProjectList() throws IOException {
 			projectListSize = readIntegerValue();
