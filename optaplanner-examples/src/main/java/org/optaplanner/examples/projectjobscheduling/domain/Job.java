@@ -28,30 +28,49 @@ public class Job extends AbstractPersistable {
     private JobType jobType;
     private int originalJobId;
     private List<ExecutionMode> executionModeList;
-    private int clockingStartMarks = 0;
-    private int clockingEndMarks = 0;
+    private int endSyncClockStartMarks = 0;
+    private int endSyncClockEndMarks = 0;
+    private int timingClockStartMarks = 0;
+    private int timingClockEndMarks = 0;
 
     private List<Job> successorJobList;
 	private String priority;
 	private int committedProjectDay;
 
-    
-    public int getClockingStartMarks() {
-    	return clockingStartMarks;
+	public int getTimingClockStartMarks() {
+    	return timingClockStartMarks;
     }
     
-    public void incrementClockingStartMarks()
+    public void incrementTimingClockStartMarks()
     {
-    	this.clockingStartMarks++;
+    	this.timingClockStartMarks++;
     }
  
-    public int getClockingEndMarks() {
-    	return clockingEndMarks;
+    public int getTimingClockEndMarks() {
+    	return timingClockEndMarks;
     }
     
-    public void incrementClockingEndMarks()
+    public void incrementTimingClockEndMarks()
     {
-    	this.clockingEndMarks++;
+    	this.timingClockEndMarks++;
+    }
+	
+    public int getEndSyncClockStartMarks() {
+    	return endSyncClockStartMarks;
+    }
+    
+    public void incrementEndSyncClockStartMarks()
+    {
+    	this.endSyncClockStartMarks++;
+    }
+ 
+    public int getEndSyncClockEndMarks() {
+    	return endSyncClockEndMarks;
+    }
+    
+    public void incrementEndSyncClockEndMarks()
+    {
+    	this.endSyncClockEndMarks++;
     }
     
     public Project getProject() {

@@ -25,7 +25,12 @@ public class NotSourceOrSinkAllocationFilter implements SelectionFilter<Allocati
 
     public boolean accept(ScoreDirector scoreDirector, Allocation allocation) {
         JobType jobType = allocation.getJob().getJobType();
-        return jobType != JobType.SOURCE && jobType != JobType.SINK;
+        if (jobType == JobType.SOURCE || jobType == JobType.SINK) return false; 
+        if (allocation.getProject().getId() ==0 && allocation.getJob().getOriginalJobId() == 2) 
+        	{
+        	return false;
+        	}
+        return  true;  //jobType != JobType.SOURCE && jobType != JobType.SINK && (allocation.getId() != 2 && allocation.getEndDate() != 10);
     }
 
 }

@@ -44,9 +44,10 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 	private int totalProjectDelay;
 	private int totalJobDelay;
 	private int totalMakeSpan;
-	private int totalClockedDelay;
+	private int totalEndSyncGap;
 	private HashMap<String, Integer> priorityJobDelays;
 	private int totalCommitmentOverrun;
+	private int totalTimedJobMakespan;
 
 	public void resetWorkingSolution(Schedule schedule) {
 		List<Resource> resourceList = schedule.getResourceList();
@@ -63,8 +64,9 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		totalProjectDelay = 0;
 		totalJobDelay = 0;
 		totalMakeSpan = 0;
-		totalClockedDelay = 0;
+		totalEndSyncGap = 0;
 		totalCommitmentOverrun = 0;
+		totalTimedJobMakespan = 0;
 		priorityJobDelays = new HashMap();
 		int minimumReleaseDate = Integer.MAX_VALUE;
 		for (Project p : projectList) {
@@ -133,18 +135,24 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			totalJobDelay -= allocation.getDelay() == null ? 0 : allocation.getDelay();
 		}
 
-		// Total clocked delay
-		if (allocation.getJob().getClockingStartMarks() != 0) {
-			totalClockedDelay += allocation.getStartDate() * allocation.getJob().getClockingStartMarks();// -
-																											// allocation.getJob().getClock();
-			// allocation.getJob().setClock(allocation.getStartDate());
+		// Total work end sync gap
+		if (allocation.getJob().getEndSyncClockStartMarks() != 0) {
+			totalEndSyncGap += allocation.getStartDate() * allocation.getJob().getEndSyncClockStartMarks();
 
 		}
-		if (allocation.getJob().getClockingEndMarks() != 0) {
-			totalClockedDelay -= allocation.getEndDate() * allocation.getJob().getClockingEndMarks(); // allocation.getJob().getClock();//
-			// allocation.getJob().setClock(allocation.getEndDate());
+		if (allocation.getJob().getEndSyncClockEndMarks() != 0) {
+			totalEndSyncGap -= allocation.getEndDate() * allocation.getJob().getEndSyncClockEndMarks();
 		}
 
+		// Total timed job make span
+				if (allocation.getJob().getTimingClockStartMarks() != 0) {
+					totalTimedJobMakespan += allocation.getStartDate() * allocation.getJob().getTimingClockStartMarks();
+
+				}
+				if (allocation.getJob().getTimingClockEndMarks() != 0) {
+					totalTimedJobMakespan -= allocation.getEndDate() * allocation.getJob().getTimingClockEndMarks();
+				}
+		
 		// Priority jobs delay
 		if (allocation.getJob().getPriorityMark() != null) {
 			if (!priorityJobDelays.containsKey(allocation.getJob().getPriorityMark())) {
@@ -193,18 +201,24 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			totalJobDelay += allocation.getDelay() == null ? 0 : allocation.getDelay();
 		}
 
-		// Total clocked delay
-		if (allocation.getJob().getClockingStartMarks() != 0) {
-			totalClockedDelay -= allocation.getStartDate() * allocation.getJob().getClockingStartMarks();// -
-																											// allocation.getJob().getClock();
-			// allocation.getJob().setClock(allocation.getStartDate());
+		// Total work end sync gap
+		if (allocation.getJob().getEndSyncClockStartMarks() != 0) {
+			totalEndSyncGap -= allocation.getStartDate() * allocation.getJob().getEndSyncClockStartMarks();
 
 		}
-		if (allocation.getJob().getClockingEndMarks() != 0) {
-			totalClockedDelay += allocation.getEndDate() * allocation.getJob().getClockingEndMarks(); // allocation.getJob().getClock();
-			// allocation.getJob().setClock(allocation.getEndDate());
+		if (allocation.getJob().getEndSyncClockEndMarks() != 0) {
+			totalEndSyncGap += allocation.getEndDate() * allocation.getJob().getEndSyncClockEndMarks(); 
 		}
 
+		// Total timed job make span
+		if (allocation.getJob().getTimingClockStartMarks() != 0) {
+			totalTimedJobMakespan -= allocation.getStartDate() * allocation.getJob().getTimingClockStartMarks();
+
+		}
+		if (allocation.getJob().getTimingClockEndMarks() != 0) {
+			totalTimedJobMakespan += allocation.getEndDate() * allocation.getJob().getTimingClockEndMarks();
+		}
+		
 		// Priority jobs delay
 		if (allocation.getJob().getPriorityMark() != null) {
 			if (!priorityJobDelays.containsKey(allocation.getJob().getPriorityMark())) {
@@ -237,7 +251,9 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 								+ (priorityJobDelays.containsKey("Critical") ? priorityJobDelays.get("Critical") : 0),
 						totalProjectDelay,
 						// totalMakeSpan,
-						priorityJobDelays.containsKey("Major") ? priorityJobDelays.get("Major") : 0, totalClockedDelay,
+						priorityJobDelays.containsKey("Major") ? priorityJobDelays.get("Major") : 0,
+						totalTimedJobMakespan,
+						totalEndSyncGap,
 						totalJobDelay });
 	}
 

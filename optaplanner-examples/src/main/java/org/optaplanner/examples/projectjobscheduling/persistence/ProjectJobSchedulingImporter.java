@@ -47,14 +47,14 @@ import org.optaplanner.examples.projectjobscheduling.domain.Schedule;
 import org.optaplanner.examples.projectjobscheduling.domain.resource.GlobalResource;
 import org.optaplanner.examples.projectjobscheduling.domain.resource.LocalResource;
 import org.optaplanner.examples.projectjobscheduling.domain.resource.Resource;
-import org.optaplanner.examples.projectjobscheduling.persistence.ProjectJobSchedulingImporter.ClockMarksFileInputBuilder;
+import org.optaplanner.examples.projectjobscheduling.persistence.ProjectJobSchedulingImporter.EndSyncClockMarksFileInputBuilder;
 
 public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 
-	public static class ClockMarksFileInputBuilder extends TxtInputBuilder {
+	public static class EndSyncClockMarksFileInputBuilder extends TxtInputBuilder {
 		private Schedule schedule;
 
-		public ClockMarksFileInputBuilder(Schedule schedule) {
+		public EndSyncClockMarksFileInputBuilder(Schedule schedule) {
 			this.schedule = schedule;
 		}
 
@@ -66,11 +66,37 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				this.schedule.getJobList()
 					.stream()
 					.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[1]))
-					.forEach(fj -> fj.incrementClockingStartMarks());
+					.forEach(fj -> fj.incrementEndSyncClockStartMarks());
 				this.schedule.getJobList()
 				.stream()
 				.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[2]))
-				.forEach(fj -> fj.incrementClockingEndMarks());
+				.forEach(fj -> fj.incrementEndSyncClockEndMarks());
+			}
+			return null;
+		}
+
+	}
+	
+	public static class TimingClockMarksFileInputBuilder extends TxtInputBuilder {
+		private Schedule schedule;
+
+		public TimingClockMarksFileInputBuilder(Schedule schedule) {
+			this.schedule = schedule;
+		}
+
+		@Override
+		public Solution readSolution() throws IOException {
+			int markersCount = readIntegerValue("Total markers: ");
+			for (int i = 0; i < markersCount; i++) {
+				String[] tokens = splitBySpacesOrTabs(readStringValue());
+				this.schedule.getJobList()
+					.stream()
+					.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[1]))
+					.forEach(fj -> fj.incrementTimingClockStartMarks());
+				this.schedule.getJobList()
+				.stream()
+				.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[2]))
+				.forEach(fj -> fj.incrementTimingClockEndMarks());
 			}
 			return null;
 		}
@@ -161,7 +187,8 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			for (Map.Entry<Project, File> entry : projectFileMap.entrySet()) {
 				readProjectFile(entry.getKey(), entry.getValue());
 			}
-			readClockingMarkers();
+			readTimingClockingMarkers();
+			readEndSyncClockingMarkers();
 			readPriorities();
 			readCommitments();
 			removePointlessExecutionModes();
@@ -245,34 +272,34 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 
 		}
 		
-		private void readClockingMarkers() {
-			String clockMarkersFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
-					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "clocks";
-			File clockMarkersFile = new File(clockMarkersFilePath);
-			if (!clockMarkersFile.exists()) {
-				logger.warn("The expected clock marks file (" + clockMarkersFilePath
-						+ ") does not exist. Proceeding without clock marks.");
+		private void readEndSyncClockingMarkers() {
+			String EndSyncClockMarkersFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
+					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "syncclocks";
+			File endSyncClockMarkersFile = new File(EndSyncClockMarkersFilePath);
+			if (!endSyncClockMarkersFile.exists()) {
+				logger.warn("The expected end sync clock marks file (" + EndSyncClockMarkersFilePath
+						+ ") does not exist. Proceeding without end sync clock marks.");
 				return;
 			}
 			BufferedReader bufferedReader = null;
 			try {
 				bufferedReader = new BufferedReader(
-						new InputStreamReader(new FileInputStream(clockMarkersFile), "UTF-8"));
+						new InputStreamReader(new FileInputStream(endSyncClockMarkersFile), "UTF-8"));
 
-				ClockMarksFileInputBuilder clockMarksFileInputBuilder = new ClockMarksFileInputBuilder(schedule);
-				clockMarksFileInputBuilder.setInputFile(clockMarkersFile);
-				clockMarksFileInputBuilder.setBufferedReader(bufferedReader);
+				EndSyncClockMarksFileInputBuilder endSyncClockMarksFileInputBuilder = new EndSyncClockMarksFileInputBuilder(schedule);
+				endSyncClockMarksFileInputBuilder.setInputFile(endSyncClockMarkersFile);
+				endSyncClockMarksFileInputBuilder.setBufferedReader(bufferedReader);
 				try {
-					clockMarksFileInputBuilder.readSolution();
+					endSyncClockMarksFileInputBuilder.readSolution();
 				} catch (IllegalArgumentException e) {
-					throw new IllegalArgumentException("Exception in clock marks file (" + clockMarkersFilePath + ")",
+					throw new IllegalArgumentException("Exception in end sync clock marks file (" + EndSyncClockMarkersFilePath + ")",
 							e);
 				} catch (IllegalStateException e) {
 					throw new IllegalStateException(
-							"Exception in clock marks file (" + clockMarkersFilePath + ")", e);
+							"Exception in end sync clock marks file (" + EndSyncClockMarkersFilePath + ")", e);
 				}
 			} catch (IOException e) {
-				throw new IllegalArgumentException("Could not read the clock marks file (" + clockMarkersFilePath + ")",
+				throw new IllegalArgumentException("Could not read the end sync clock marks file (" + EndSyncClockMarkersFilePath + ")",
 						e);
 			} finally {
 				IOUtils.closeQuietly(bufferedReader);
@@ -280,6 +307,42 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 
 		}
 
+		private void readTimingClockingMarkers() {
+			String TimingClockMarkersFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
+					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "timingclocks";
+			File timingClockMarkersFile = new File(TimingClockMarkersFilePath);
+			if (!timingClockMarkersFile.exists()) {
+				logger.warn("The expected timing clock marks file (" + TimingClockMarkersFilePath
+						+ ") does not exist. Proceeding without timing clock marks.");
+				return;
+			}
+			BufferedReader bufferedReader = null;
+			try {
+				bufferedReader = new BufferedReader(
+						new InputStreamReader(new FileInputStream(timingClockMarkersFile), "UTF-8"));
+
+				TimingClockMarksFileInputBuilder timingClockMarksFileInputBuilder = new TimingClockMarksFileInputBuilder(schedule);
+				timingClockMarksFileInputBuilder.setInputFile(timingClockMarkersFile);
+				timingClockMarksFileInputBuilder.setBufferedReader(bufferedReader);
+				try {
+					timingClockMarksFileInputBuilder.readSolution();
+				} catch (IllegalArgumentException e) {
+					throw new IllegalArgumentException("Exception in timing clock marks file (" + TimingClockMarkersFilePath + ")",
+							e);
+				} catch (IllegalStateException e) {
+					throw new IllegalStateException(
+							"Exception in timing clock marks file (" + TimingClockMarkersFilePath + ")", e);
+				}
+			} catch (IOException e) {
+				throw new IllegalArgumentException("Could not read the timing clock marks file (" + TimingClockMarkersFilePath + ")",
+						e);
+			} finally {
+				IOUtils.closeQuietly(bufferedReader);
+			}
+
+		}
+		
+		
 		private void readProjectList() throws IOException {
 			projectListSize = readIntegerValue();
 			List<Project> projectList = new ArrayList<Project>(projectListSize);
@@ -615,6 +678,11 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				// Uninitialized allocations take no time, but don't break the
 				// predecessorsDoneDate cascade to sink.
 				allocation.setPredecessorsDoneDate(job.getProject().getReleaseDate());
+				if (allocation.getProject().getId() ==0 && allocation.getJob().getOriginalJobId() == 2)
+				{
+					allocation.setDelay(3);
+					allocation.setExecutionMode(job.getExecutionModeList().get(0));
+				}
 				if (job.getJobType() == JobType.SOURCE) {
 					allocation.setDelay(0);
 					if (job.getExecutionModeList().size() != 1) {
