@@ -767,9 +767,11 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 
 			// Set predecessorDoneDate which might be affected by fixed-date
 			// predecessors
-			for (Allocation allocation : allocationList) {
-				CascadedDoneDateUpdate(allocation);
-			}
+			allocationList
+				.stream()
+				.filter(a -> a.getJob().getFixedStartDate() != 0)
+				.forEach(this::CascadedDoneDateUpdate);
+
 
 			for (Allocation sourceAllocation : projectToSourceAllocationMap.values()) {
 				for (Allocation allocation : sourceAllocation.getSuccessorAllocationList()) {
