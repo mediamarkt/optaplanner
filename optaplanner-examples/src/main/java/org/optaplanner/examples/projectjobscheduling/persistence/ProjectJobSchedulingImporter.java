@@ -725,7 +725,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				// Uninitialized allocations take no time, but don't break the
 				// predecessorsDoneDate cascade to sink.
 				allocation.setPredecessorsDoneDate(job.getProject().getReleaseDate());
-				if (job.getFixedStartDate() != 0) {
+				if (job.getFixedStartDate() != null) {
 					allocation.setDelay(job.getFixedStartDate());// TODO
 																	// subtract
 																	// project
@@ -769,7 +769,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			// predecessors
 			allocationList
 				.stream()
-				.filter(a -> a.getJob().getFixedStartDate() != 0)
+				.filter(a -> a.getJob().getFixedStartDate() != null)
 				.forEach(this::CascadedDoneDateUpdate);
 
 

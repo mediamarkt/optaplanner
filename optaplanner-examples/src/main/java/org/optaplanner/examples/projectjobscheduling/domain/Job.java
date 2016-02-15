@@ -32,7 +32,7 @@ public class Job extends AbstractPersistable {
     private int endSyncClockEndMarks = 0;
     private int timingClockStartMarks = 0;
     private int timingClockEndMarks = 0;
-    private int fixedStartDate = 0; 
+    private Integer fixedStartDate; 
 
     private List<Job> successorJobList;
 	private String priority;
@@ -74,11 +74,11 @@ public class Job extends AbstractPersistable {
     	this.endSyncClockEndMarks++;
     }
     
-    public int getFixedStartDate() {
+    public Integer getFixedStartDate() {
     	return fixedStartDate;
     }
     
-    public void setFixedStartDate(int fixedStartDate) {
+    public void setFixedStartDate(Integer fixedStartDate) {
     	this.fixedStartDate = fixedStartDate;
     }
     
