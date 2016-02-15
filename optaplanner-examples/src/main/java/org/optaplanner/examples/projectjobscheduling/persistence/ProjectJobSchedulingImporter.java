@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -63,20 +64,16 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			int markersCount = readIntegerValue("Total markers: ");
 			for (int i = 0; i < markersCount; i++) {
 				String[] tokens = splitBySpacesOrTabs(readStringValue());
-				this.schedule.getJobList()
-					.stream()
-					.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[1]))
-					.forEach(fj -> fj.incrementEndSyncClockStartMarks());
-				this.schedule.getJobList()
-				.stream()
-				.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[2]))
-				.forEach(fj -> fj.incrementEndSyncClockEndMarks());
+				this.schedule.getJobList().stream().filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[1]))
+						.forEach(fj -> fj.incrementEndSyncClockStartMarks());
+				this.schedule.getJobList().stream().filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[2]))
+						.forEach(fj -> fj.incrementEndSyncClockEndMarks());
 			}
 			return null;
 		}
 
 	}
-	
+
 	public static class TimingClockMarksFileInputBuilder extends TxtInputBuilder {
 		private Schedule schedule;
 
@@ -89,20 +86,16 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			int markersCount = readIntegerValue("Total markers: ");
 			for (int i = 0; i < markersCount; i++) {
 				String[] tokens = splitBySpacesOrTabs(readStringValue());
-				this.schedule.getJobList()
-					.stream()
-					.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[1]))
-					.forEach(fj -> fj.incrementTimingClockStartMarks());
-				this.schedule.getJobList()
-				.stream()
-				.filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[2]))
-				.forEach(fj -> fj.incrementTimingClockEndMarks());
+				this.schedule.getJobList().stream().filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[1]))
+						.forEach(fj -> fj.incrementTimingClockStartMarks());
+				this.schedule.getJobList().stream().filter(j -> j.getOriginalJobId() == Integer.parseInt(tokens[2]))
+						.forEach(fj -> fj.incrementTimingClockEndMarks());
 			}
 			return null;
 		}
 
 	}
-	
+
 	public static class CommitmentsFileInputBuilder extends TxtInputBuilder {
 		private Schedule schedule;
 
@@ -117,10 +110,8 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				String[] tokens = splitBySpacesOrTabs(readStringValue());
 				int committedJobId = Integer.parseInt(tokens[0]);
 				int committedProjectDay = Integer.parseInt(tokens[1]);
-				this.schedule.getJobList()
-					.stream()
-					.filter(j -> j.getOriginalJobId() == committedJobId)
-					.forEach(j -> j.setCommittedDay(committedProjectDay));
+				this.schedule.getJobList().stream().filter(j -> j.getOriginalJobId() == committedJobId)
+						.forEach(j -> j.setCommittedDay(committedProjectDay));
 			}
 			return null;
 		}
@@ -141,23 +132,21 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				String[] tokens = splitBySpacesOrTabs(readStringValue());
 				int priorityJobId = Integer.parseInt(tokens[0]);
 				String priorityName = tokens[1];
-				this.schedule.getJobList()
-					.stream()
-					.filter(j -> j.getOriginalJobId() == priorityJobId)
-					.forEach(j -> j.setPriorityMark(priorityName));
+				this.schedule.getJobList().stream().filter(j -> j.getOriginalJobId() == priorityJobId)
+						.forEach(j -> j.setPriorityMark(priorityName));
 			}
 			return null;
 		}
 
 	}
-	
+
 	public static class FixedStartDateFileInputBuilder extends TxtInputBuilder {
 		private Schedule schedule;
-		
+
 		public FixedStartDateFileInputBuilder(Schedule schedule) {
 			this.schedule = schedule;
 		}
-		
+
 		@Override
 		public Solution readSolution() throws IOException {
 			int fixedJobsCount = readIntegerValue("Total fixed jobs: ");
@@ -165,14 +154,13 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				String[] tokens = splitBySpacesOrTabs(readStringValue());
 				int jobId = Integer.parseInt(tokens[1]);
 				int fixedStartDate = Integer.parseInt(tokens[2]);
-				this.schedule.getJobList()
-					.stream()
-					.filter(j -> j.getOriginalJobId() == jobId && j.getProject().getId() == 0)
-					.forEach(j -> j.setFixedStartDate(fixedStartDate));
+				this.schedule.getJobList().stream()
+						.filter(j -> j.getOriginalJobId() == jobId && j.getProject().getId() == 0)
+						.forEach(j -> j.setFixedStartDate(fixedStartDate));
 			}
 			return null;
 		}
-		
+
 	}
 
 	public static void main(String[] args) {
@@ -226,7 +214,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					schedule.getResourceRequirementList().size());
 			return schedule;
 		}
-		
+
 		private void readCommitments() {
 			String commitmentsFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
 					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "commitments";
@@ -250,8 +238,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					throw new IllegalArgumentException("Exception in commitments file (" + commitmentsFilePath + ")",
 							e);
 				} catch (IllegalStateException e) {
-					throw new IllegalStateException(
-							"Exception in commitments file (" + commitmentsFilePath + ")", e);
+					throw new IllegalStateException("Exception in commitments file (" + commitmentsFilePath + ")", e);
 				}
 			} catch (IOException e) {
 				throw new IllegalArgumentException("Could not read the commitments file (" + commitmentsFilePath + ")",
@@ -282,11 +269,9 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				try {
 					prioritiesFileInputBuilder.readSolution();
 				} catch (IllegalArgumentException e) {
-					throw new IllegalArgumentException("Exception in priorities file (" + prioritiesFilePath + ")",
-							e);
+					throw new IllegalArgumentException("Exception in priorities file (" + prioritiesFilePath + ")", e);
 				} catch (IllegalStateException e) {
-					throw new IllegalStateException(
-							"Exception in priorities file (" + prioritiesFilePath + ")", e);
+					throw new IllegalStateException("Exception in priorities file (" + prioritiesFilePath + ")", e);
 				}
 			} catch (IOException e) {
 				throw new IllegalArgumentException("Could not read the priorities file (" + prioritiesFilePath + ")",
@@ -296,7 +281,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			}
 
 		}
-		
+
 		private void readEndSyncClockingMarkers() {
 			String EndSyncClockMarkersFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
 					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "syncclocks";
@@ -311,21 +296,22 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				bufferedReader = new BufferedReader(
 						new InputStreamReader(new FileInputStream(endSyncClockMarkersFile), "UTF-8"));
 
-				EndSyncClockMarksFileInputBuilder endSyncClockMarksFileInputBuilder = new EndSyncClockMarksFileInputBuilder(schedule);
+				EndSyncClockMarksFileInputBuilder endSyncClockMarksFileInputBuilder = new EndSyncClockMarksFileInputBuilder(
+						schedule);
 				endSyncClockMarksFileInputBuilder.setInputFile(endSyncClockMarkersFile);
 				endSyncClockMarksFileInputBuilder.setBufferedReader(bufferedReader);
 				try {
 					endSyncClockMarksFileInputBuilder.readSolution();
 				} catch (IllegalArgumentException e) {
-					throw new IllegalArgumentException("Exception in end sync clock marks file (" + EndSyncClockMarkersFilePath + ")",
-							e);
+					throw new IllegalArgumentException(
+							"Exception in end sync clock marks file (" + EndSyncClockMarkersFilePath + ")", e);
 				} catch (IllegalStateException e) {
 					throw new IllegalStateException(
 							"Exception in end sync clock marks file (" + EndSyncClockMarkersFilePath + ")", e);
 				}
 			} catch (IOException e) {
-				throw new IllegalArgumentException("Could not read the end sync clock marks file (" + EndSyncClockMarkersFilePath + ")",
-						e);
+				throw new IllegalArgumentException(
+						"Could not read the end sync clock marks file (" + EndSyncClockMarkersFilePath + ")", e);
 			} finally {
 				IOUtils.closeQuietly(bufferedReader);
 			}
@@ -346,28 +332,28 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				bufferedReader = new BufferedReader(
 						new InputStreamReader(new FileInputStream(timingClockMarkersFile), "UTF-8"));
 
-				TimingClockMarksFileInputBuilder timingClockMarksFileInputBuilder = new TimingClockMarksFileInputBuilder(schedule);
+				TimingClockMarksFileInputBuilder timingClockMarksFileInputBuilder = new TimingClockMarksFileInputBuilder(
+						schedule);
 				timingClockMarksFileInputBuilder.setInputFile(timingClockMarkersFile);
 				timingClockMarksFileInputBuilder.setBufferedReader(bufferedReader);
 				try {
 					timingClockMarksFileInputBuilder.readSolution();
 				} catch (IllegalArgumentException e) {
-					throw new IllegalArgumentException("Exception in timing clock marks file (" + TimingClockMarkersFilePath + ")",
-							e);
+					throw new IllegalArgumentException(
+							"Exception in timing clock marks file (" + TimingClockMarkersFilePath + ")", e);
 				} catch (IllegalStateException e) {
 					throw new IllegalStateException(
 							"Exception in timing clock marks file (" + TimingClockMarkersFilePath + ")", e);
 				}
 			} catch (IOException e) {
-				throw new IllegalArgumentException("Could not read the timing clock marks file (" + TimingClockMarkersFilePath + ")",
-						e);
+				throw new IllegalArgumentException(
+						"Could not read the timing clock marks file (" + TimingClockMarkersFilePath + ")", e);
 			} finally {
 				IOUtils.closeQuietly(bufferedReader);
 			}
 
 		}
-		
-				
+
 		private void readFixedStartDates() {
 			String fixedStartDatesFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
 					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "fixeddates";
@@ -382,7 +368,8 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				bufferedReader = new BufferedReader(
 						new InputStreamReader(new FileInputStream(fixedStartDatesFile), "UTF-8"));
 
-				FixedStartDateFileInputBuilder fixedStartDatesFileInputBuilder = new FixedStartDateFileInputBuilder(schedule);
+				FixedStartDateFileInputBuilder fixedStartDatesFileInputBuilder = new FixedStartDateFileInputBuilder(
+						schedule);
 				fixedStartDatesFileInputBuilder.setInputFile(fixedStartDatesFile);
 				fixedStartDatesFileInputBuilder.setBufferedReader(bufferedReader);
 				try {
@@ -391,18 +378,18 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					throw new IllegalArgumentException("Exception in fixed jobs file (" + fixedStartDatesFilePath + ")",
 							e);
 				} catch (IllegalStateException e) {
-					throw new IllegalStateException(
-							"Exception in fixed jobs file (" + fixedStartDatesFilePath + ")", e);
+					throw new IllegalStateException("Exception in fixed jobs file (" + fixedStartDatesFilePath + ")",
+							e);
 				}
 			} catch (IOException e) {
-				throw new IllegalArgumentException("Could not read the fixed jobs file (" + fixedStartDatesFilePath + ")",
-						e);
+				throw new IllegalArgumentException(
+						"Could not read the fixed jobs file (" + fixedStartDatesFilePath + ")", e);
 			} finally {
 				IOUtils.closeQuietly(bufferedReader);
 			}
 
 		}
-		
+
 		private void readProjectList() throws IOException {
 			projectListSize = readIntegerValue();
 			List<Project> projectList = new ArrayList<Project>(projectListSize);
@@ -570,11 +557,11 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					if (i == 0) {
 						job.setJobType(JobType.SOURCE);
 						// TODO: this is a testing hack
-						//job.setClockingSide(ClockingSide.START);
+						// job.setClockingSide(ClockingSide.START);
 					} else if (i == jobListSize - 1) {
 						job.setJobType(JobType.SINK);
 						// TODO: this is a testing hack
-						//job.setClockingSide(ClockingSide.END);
+						// job.setClockingSide(ClockingSide.END);
 					} else {
 						job.setJobType(JobType.STANDARD);
 					}
@@ -738,11 +725,15 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				// Uninitialized allocations take no time, but don't break the
 				// predecessorsDoneDate cascade to sink.
 				allocation.setPredecessorsDoneDate(job.getProject().getReleaseDate());
-				if(job.getFixedStartDate() != 0) {
-					allocation.setDelay(job.getFixedStartDate());//TODO subtract project start date
+				if (job.getFixedStartDate() != 0) {
+					allocation.setDelay(job.getFixedStartDate());// TODO
+																	// subtract
+																	// project
+																	// start
+																	// date
 					allocation.setExecutionMode(job.getExecutionModeList().get(0));
 				}
-				
+
 				if (job.getJobType() == JobType.SOURCE) {
 					allocation.setDelay(0);
 					if (job.getExecutionModeList().size() != 1) {
@@ -771,15 +762,33 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					Allocation successorAllocation = jobToAllocationMap.get(successorJob);
 					allocation.getSuccessorAllocationList().add(successorAllocation);
 					successorAllocation.getPredecessorAllocationList().add(allocation);
-					successorAllocation.setPredecessorsDoneDate(Math.max(allocation.getEndDate(), successorAllocation.getPredecessorsDoneDate()));
 				}
 			}
+
+			// Set predecessorDoneDate which might be affected by fixed-date
+			// predecessors
+			for (Allocation allocation : allocationList) {
+				CascadedDoneDateUpdate(allocation);
+			}
+
 			for (Allocation sourceAllocation : projectToSourceAllocationMap.values()) {
 				for (Allocation allocation : sourceAllocation.getSuccessorAllocationList()) {
 					allocation.setPredecessorsDoneDate(sourceAllocation.getEndDate());
 				}
 			}
 			schedule.setAllocationList(allocationList);
+		}
+
+		private void CascadedDoneDateUpdate(Allocation allocation) {
+			if (allocation.getJobType() != JobType.SOURCE) {
+				allocation.setPredecessorsDoneDate(allocation.getPredecessorAllocationList().stream()
+						.map(Allocation::getEndDate).reduce(0, (a, b) -> Math.max(a, b)));
+			}
+			if (allocation.getJobType() != JobType.SINK) {
+				for (Allocation successorAllocation : allocation.getSuccessorAllocationList()) {
+					CascadedDoneDateUpdate(successorAllocation);
+				}
+			}
 		}
 
 	}
