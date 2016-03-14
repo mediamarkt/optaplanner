@@ -137,11 +137,11 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 
 		// Total work end sync gap
 		if (allocation.getJob().getEndSyncClockStartMarks() != 0) {
-			totalEndSyncGap += allocation.getStartDate() * allocation.getJob().getEndSyncClockStartMarks();
+			totalEndSyncGap += allocation.getEndDate() * allocation.getJob().getEndSyncClockStartMarks();
 
 		}
 		if (allocation.getJob().getEndSyncClockEndMarks() != 0) {
-			totalEndSyncGap -= allocation.getEndDate() * allocation.getJob().getEndSyncClockEndMarks();
+			totalEndSyncGap -= allocation.getStartDate() * allocation.getJob().getEndSyncClockEndMarks();
 		}
 
 		// Total timed job make span
@@ -203,11 +203,11 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 
 		// Total work end sync gap
 		if (allocation.getJob().getEndSyncClockStartMarks() != 0) {
-			totalEndSyncGap -= allocation.getStartDate() * allocation.getJob().getEndSyncClockStartMarks();
+			totalEndSyncGap -= allocation.getEndDate() * allocation.getJob().getEndSyncClockStartMarks();
 
 		}
 		if (allocation.getJob().getEndSyncClockEndMarks() != 0) {
-			totalEndSyncGap += allocation.getEndDate() * allocation.getJob().getEndSyncClockEndMarks(); 
+			totalEndSyncGap += allocation.getStartDate() * allocation.getJob().getEndSyncClockEndMarks(); 
 		}
 
 		// Total timed job make span
@@ -250,7 +250,6 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 						(priorityJobDelays.containsKey("Blocker") ? priorityJobDelays.get("Blocker") : 0)
 								+ (priorityJobDelays.containsKey("Critical") ? priorityJobDelays.get("Critical") : 0),
 						totalProjectDelay,
-						// totalMakeSpan,
 						priorityJobDelays.containsKey("Major") ? priorityJobDelays.get("Major") : 0,
 						totalTimedJobMakespan,
 						totalEndSyncGap,
