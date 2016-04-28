@@ -43,7 +43,7 @@ public class Schedule extends AbstractPersistable implements Solution<BendableSc
 
     private List<Allocation> allocationList;
 
-    @XStreamConverter(value = XStreamScoreConverter.class, types = {BendableScoreDefinition.class}, ints = {1, 7})
+    @XStreamConverter(value = XStreamScoreConverter.class, types = {BendableScoreDefinition.class}, ints = {1, 8})
     private BendableScore score;
 
     public List<Project> getProjectList() {

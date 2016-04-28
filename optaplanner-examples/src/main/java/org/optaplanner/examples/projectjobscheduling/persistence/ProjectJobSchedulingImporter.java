@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -234,7 +235,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 							+ " and {} resource requirements.",
 					getInputId(), schedule.getProjectList().size(), schedule.getJobList().size(),
 					schedule.getExecutionModeList().size(), schedule.getResourceList().size(),
-					schedule.getResourceRequirementList().size());
+					schedule.getResourceRequirementList().size());			
 			return schedule;
 		}
 

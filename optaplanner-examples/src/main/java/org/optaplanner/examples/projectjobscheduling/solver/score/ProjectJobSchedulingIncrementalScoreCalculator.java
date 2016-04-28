@@ -16,6 +16,7 @@
 
 package org.optaplanner.examples.projectjobscheduling.solver.score;
 
+import java.io.Console;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 
 	private int resourceCapcityViolations;
 	private int totalProjectDelay;
+	private int totalVerifiedParentsJobsEndsSumm;
 	private int totalJobDelay;
 	private int totalMakeSpan;
 	private int totalEndSyncGap;
@@ -62,6 +64,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		maximumProjectEndDate = 0;
 		resourceCapcityViolations = 0;
 		totalProjectDelay = 0;
+		totalVerifiedParentsJobsEndsSumm = 0;
 		totalJobDelay = 0;
 		totalMakeSpan = 0;
 		totalEndSyncGap = 0;
@@ -160,6 +163,13 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			}
 			priorityJobDelays.compute(allocation.getJob().getPriorityMark(), (a, b) -> b - allocation.getEndDate());
 		}
+		
+		// Verified and In Progress PREQs works end dates sum
+		String parentStatus = allocation.getJob().getParentStatus(); 
+		if(parentStatus != null && (parentStatus.equals("Verified") || parentStatus.equals("InProgress")))//InProgress I add too
+		{
+			totalVerifiedParentsJobsEndsSumm -= allocation.getEndDate();
+		}
 
 		// Committed date overruns
 		if (allocation.getJob().getCommittedDay() != 0) {
@@ -226,6 +236,12 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			}
 			priorityJobDelays.compute(allocation.getJob().getPriorityMark(), (a, b) -> b + allocation.getEndDate());
 		}
+		
+		String parentStatus = allocation.getJob().getParentStatus();
+		if(parentStatus != null && (parentStatus.equals("Verified") || parentStatus.equals("InProgress")))//InProgress I add too
+		{
+			totalVerifiedParentsJobsEndsSumm += allocation.getEndDate();
+		}
 
 		// Committed date overruns
 		if (allocation.getJob().getCommittedDay() != 0) {
@@ -247,6 +263,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 	public Score calculateScore() {
 		return BendableScore.valueOf(new int[] { resourceCapcityViolations },
 				new int[] { totalCommitmentOverrun,
+						totalVerifiedParentsJobsEndsSumm,
 						(priorityJobDelays.containsKey("Blocker") ? priorityJobDelays.get("Blocker") : 0)
 								+ (priorityJobDelays.containsKey("Critical") ? priorityJobDelays.get("Critical") : 0),
 						totalProjectDelay,
