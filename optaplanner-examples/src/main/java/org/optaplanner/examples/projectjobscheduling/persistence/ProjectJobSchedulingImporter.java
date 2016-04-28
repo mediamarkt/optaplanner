@@ -162,6 +162,28 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 		}
 
 	}
+	
+	public static class JobsParentsStatusesFileInputBuilder extends TxtInputBuilder {
+		private Schedule schedule;
+		
+		public JobsParentsStatusesFileInputBuilder(Schedule schedule){
+			this.schedule = schedule;
+		}
+
+		@Override
+		public Solution readSolution() throws IOException {
+			int jobsCount = readIntegerValue("Total jobs: ");
+			for (int i = 0; i < jobsCount; i++) {
+				String[] tokens = splitBySpacesOrTabs(readStringValue());
+				int jobId = Integer.parseInt(tokens[0]);
+				String status = tokens[1];
+				this.schedule.getJobList().stream()
+						.filter(j -> j.getOriginalJobId() == jobId && j.getProject().getId() == 0)
+						.forEach(j -> j.setParentStatus(status));
+			}
+			return null;
+		}
+	}
 
 	public static void main(String[] args) {
 		new ProjectJobSchedulingImporter().convertAll();
@@ -205,6 +227,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			readCommitments();
 			removePointlessExecutionModes();
 			readFixedStartDates();
+			readJobsParentsStatuses();
 			createAllocationList();
 			logger.info(
 					"Schedule {} has {} projects, {} jobs, {} execution modes, {} resources"
@@ -387,7 +410,41 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			} finally {
 				IOUtils.closeQuietly(bufferedReader);
 			}
+		}
+		
+		private void readJobsParentsStatuses() {
+			String parentsStatusesFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
+					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "wps";
+			File parentsStatusesFile = new File(parentsStatusesFilePath);
+			if (!parentsStatusesFile.exists()) {
+				logger.warn("The expected jobs parents statuses file (" + parentsStatusesFilePath
+						+ ") does not exist. Proceeding without jobs parents statuses.");
+				return;
+			}
+			BufferedReader bufferedReader = null;
+			try {
+				bufferedReader = new BufferedReader(
+						new InputStreamReader(new FileInputStream(parentsStatusesFile), "UTF-8"));
 
+				JobsParentsStatusesFileInputBuilder jobsParentsStatusesFileInputBuilder = new JobsParentsStatusesFileInputBuilder(
+						schedule);
+				jobsParentsStatusesFileInputBuilder.setInputFile(parentsStatusesFile);
+				jobsParentsStatusesFileInputBuilder.setBufferedReader(bufferedReader);
+				try {
+					jobsParentsStatusesFileInputBuilder.readSolution();
+				} catch (IllegalArgumentException e) {
+					throw new IllegalArgumentException("Exception in jobs parents statuses file (" + parentsStatusesFilePath + ")",
+							e);
+				} catch (IllegalStateException e) {
+					throw new IllegalStateException("Exception in jobs parents statuses file (" + parentsStatusesFilePath + ")",
+							e);
+				}
+			} catch (IOException e) {
+				throw new IllegalArgumentException(
+						"Could not read the jobs parents statuses file (" + parentsStatusesFilePath + ")", e);
+			} finally {
+				IOUtils.closeQuietly(bufferedReader);
+			}
 		}
 
 		private void readProjectList() throws IOException {

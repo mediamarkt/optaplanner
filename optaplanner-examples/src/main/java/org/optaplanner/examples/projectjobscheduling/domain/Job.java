@@ -37,6 +37,8 @@ public class Job extends AbstractPersistable {
     private List<Job> successorJobList;
 	private String priority;
 	private int committedProjectDay;
+	
+	private String parentStatus;
 
 	public int getTimingClockStartMarks() {
     	return timingClockStartMarks;
@@ -137,6 +139,16 @@ public class Job extends AbstractPersistable {
 	public int getCommittedDay(){
 		return this.committedProjectDay;
 	}
+
+	public String getParentStatus() {
+		return parentStatus;
+	}
+
+	public void setParentStatus(String parentStatus) {
+		this.parentStatus = parentStatus;
+	}
+	
+	
 
 
     // ************************************************************************
