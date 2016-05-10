@@ -38,7 +38,7 @@ public class Job extends AbstractPersistable {
 	private String priority;
 	private int committedProjectDay;
 	
-	private String parentStatus;
+	private String jobStatus;
 
 	public int getTimingClockStartMarks() {
     	return timingClockStartMarks;
@@ -140,16 +140,17 @@ public class Job extends AbstractPersistable {
 		return this.committedProjectDay;
 	}
 
-	public String getParentStatus() {
-		return parentStatus;
+	public String getJobStatus() {
+		return jobStatus;
 	}
 
-	public void setParentStatus(String parentStatus) {
-		this.parentStatus = parentStatus;
+	public void setJobStatus(String jobStatus) {
+		this.jobStatus = jobStatus;
 	}
 	
-	
-
+	public boolean isVerified()	{
+		return jobStatus != null && (jobStatus.equals("Verified") || jobStatus.equals("InProgress"));
+	}
 
     // ************************************************************************
     // Complex methods

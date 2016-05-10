@@ -164,23 +164,23 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 
 	}
 	
-	public static class JobsParentsStatusesFileInputBuilder extends TxtInputBuilder {
+	public static class JobsStatusesFileInputBuilder extends TxtInputBuilder {
 		private Schedule schedule;
 		
-		public JobsParentsStatusesFileInputBuilder(Schedule schedule){
+		public JobsStatusesFileInputBuilder(Schedule schedule){
 			this.schedule = schedule;
 		}
 
 		@Override
 		public Solution readSolution() throws IOException {
-			int jobsCount = readIntegerValue("Total jobs: ");
+			int jobsCount = readIntegerValue("Total priority jobs: ");
 			for (int i = 0; i < jobsCount; i++) {
 				String[] tokens = splitBySpacesOrTabs(readStringValue());
 				int jobId = Integer.parseInt(tokens[0]);
 				String status = tokens[1];
 				this.schedule.getJobList().stream()
 						.filter(j -> j.getOriginalJobId() == jobId && j.getProject().getId() == 0)
-						.forEach(j -> j.setParentStatus(status));
+						.forEach(j -> j.setJobStatus(status));
 			}
 			return null;
 		}
@@ -228,7 +228,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			readCommitments();
 			removePointlessExecutionModes();
 			readFixedStartDates();
-			readJobsParentsStatuses();
+			readJobsStatuses();
 			createAllocationList();
 			logger.info(
 					"Schedule {} has {} projects, {} jobs, {} execution modes, {} resources"
@@ -413,36 +413,36 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			}
 		}
 		
-		private void readJobsParentsStatuses() {
-			String parentsStatusesFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
-					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "wps";
-			File parentsStatusesFile = new File(parentsStatusesFilePath);
-			if (!parentsStatusesFile.exists()) {
-				logger.warn("The expected jobs parents statuses file (" + parentsStatusesFilePath
-						+ ") does not exist. Proceeding without jobs parents statuses.");
+		private void readJobsStatuses() {
+			String jobsStatusesFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
+					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "bps";
+			File jobsStatusesFile = new File(jobsStatusesFilePath);
+			if (!jobsStatusesFile.exists()) {
+				logger.warn("The expected jobs statuses file (" + jobsStatusesFilePath
+						+ ") does not exist. Proceeding without jobs statuses.");
 				return;
 			}
 			BufferedReader bufferedReader = null;
 			try {
 				bufferedReader = new BufferedReader(
-						new InputStreamReader(new FileInputStream(parentsStatusesFile), "UTF-8"));
+						new InputStreamReader(new FileInputStream(jobsStatusesFile), "UTF-8"));
 
-				JobsParentsStatusesFileInputBuilder jobsParentsStatusesFileInputBuilder = new JobsParentsStatusesFileInputBuilder(
+				JobsStatusesFileInputBuilder jobsStatusesFileInputBuilder = new JobsStatusesFileInputBuilder(
 						schedule);
-				jobsParentsStatusesFileInputBuilder.setInputFile(parentsStatusesFile);
-				jobsParentsStatusesFileInputBuilder.setBufferedReader(bufferedReader);
+				jobsStatusesFileInputBuilder.setInputFile(jobsStatusesFile);
+				jobsStatusesFileInputBuilder.setBufferedReader(bufferedReader);
 				try {
-					jobsParentsStatusesFileInputBuilder.readSolution();
+					jobsStatusesFileInputBuilder.readSolution();
 				} catch (IllegalArgumentException e) {
-					throw new IllegalArgumentException("Exception in jobs parents statuses file (" + parentsStatusesFilePath + ")",
+					throw new IllegalArgumentException("Exception in jobs statuses file (" + jobsStatusesFilePath + ")",
 							e);
 				} catch (IllegalStateException e) {
-					throw new IllegalStateException("Exception in jobs parents statuses file (" + parentsStatusesFilePath + ")",
+					throw new IllegalStateException("Exception in jobs statuses file (" + jobsStatusesFilePath + ")",
 							e);
 				}
 			} catch (IOException e) {
 				throw new IllegalArgumentException(
-						"Could not read the jobs parents statuses file (" + parentsStatusesFilePath + ")", e);
+						"Could not read the jobs statuses file (" + jobsStatusesFilePath + ")", e);
 			} finally {
 				IOUtils.closeQuietly(bufferedReader);
 			}
