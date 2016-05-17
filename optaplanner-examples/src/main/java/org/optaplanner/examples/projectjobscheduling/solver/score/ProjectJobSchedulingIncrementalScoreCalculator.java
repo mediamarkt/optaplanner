@@ -118,7 +118,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			}
 		}
 		// Total project delay and total make span
-		if (allocation.getJob().getJobType() == JobType.SINK) {
+		if (allocation.getJob().getJobType() == JobType.SUPER_SINK) {
 			Integer endDate = allocation.getEndDate();
 			if (endDate != null) {
 				Project project = allocation.getProject();
@@ -188,7 +188,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			}
 		}
 		// Total project delay and total make span
-		if (allocation.getJob().getJobType() == JobType.SINK) {
+		if (allocation.getJob().getJobType() == JobType.SUPER_SINK) {
 			Integer endDate = allocation.getEndDate();
 			if (endDate != null) {
 				Project project = allocation.getProject();

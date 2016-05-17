@@ -17,7 +17,9 @@
 package org.optaplanner.examples.projectjobscheduling.domain;
 
 public enum JobType {
+    SUPER_SOURCE,
     SOURCE,
     STANDARD,
-    SINK;
+    SINK,
+    SUPER_SINK;	
 }

@@ -606,23 +606,13 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 
 			private void readPrecedenceRelations() throws IOException {
 				readConstantLine("PRECEDENCE RELATIONS:");
-				readConstantLine("jobnr\\. +\\#modes +\\#successors +successors");
+				readConstantLine("jobnr\\. +type +\\#modes +\\#successors +successors");
 				List<Job> jobList = new ArrayList<Job>(jobListSize);
 				for (int i = 0; i < jobListSize; i++) {
 					Job job = new Job();
 					job.setId(jobId);
 					job.setProject(project);
-					if (i == 0) {
-						job.setJobType(JobType.SOURCE);
-						// TODO: this is a testing hack
-						// job.setClockingSide(ClockingSide.START);
-					} else if (i == jobListSize - 1) {
-						job.setJobType(JobType.SINK);
-						// TODO: this is a testing hack
-						// job.setClockingSide(ClockingSide.END);
-					} else {
-						job.setJobType(JobType.STANDARD);
-					}
+					
 					jobList.add(job);
 					jobId++;
 				}
@@ -640,7 +630,21 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 								"The tokens (" + Arrays.toString(tokens) + ") index 0 should be " + (i + 1) + ".");
 					}
 					job.setoriginalJobId(Integer.parseInt(tokens[0]));
-					int executionModeListSize = Integer.parseInt(tokens[1]);
+					
+					int jobType = Integer.parseInt(tokens[1]);
+					if(jobType == 0) {
+						job.setJobType(JobType.SUPER_SOURCE);
+					} else if(jobType == 1) {
+						job.setJobType(JobType.SUPER_SINK);
+					} else if(jobType == 2) {
+						job.setJobType(JobType.SOURCE);
+					} else if(jobType == 3) {
+						job.setJobType(JobType.SINK);
+					} else {
+						job.setJobType(JobType.STANDARD);
+					}
+					
+					int executionModeListSize = Integer.parseInt(tokens[2]);
 					List<ExecutionMode> executionModeList = new ArrayList<ExecutionMode>(executionModeListSize);
 					for (int j = 0; j < executionModeListSize; j++) {
 						ExecutionMode executionMode = new ExecutionMode();
@@ -651,14 +655,14 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					}
 					job.setExecutionModeList(executionModeList);
 					schedule.getExecutionModeList().addAll(executionModeList);
-					int successorJobListSize = Integer.parseInt(tokens[2]);
-					if (tokens.length != 3 + successorJobListSize) {
+					int successorJobListSize = Integer.parseInt(tokens[3]);
+					if (tokens.length != 4 + successorJobListSize) {
 						throw new IllegalArgumentException("The tokens (" + Arrays.toString(tokens) + ") should be "
-								+ (3 + successorJobListSize) + " in length.");
+								+ (4 + successorJobListSize) + " in length.");
 					}
 					List<Job> successorJobList = new ArrayList<Job>(successorJobListSize);
 					for (int j = 0; j < successorJobListSize; j++) {
-						int successorIndex = Integer.parseInt(tokens[3 + j]);
+						int successorIndex = Integer.parseInt(tokens[4 + j]);
 						Job successorJob = project.getJobList().get(successorIndex - 1);
 						successorJobList.add(successorJob);
 					}
@@ -792,7 +796,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					allocation.setExecutionMode(job.getExecutionModeList().get(0));
 				}
 
-				if (job.getJobType() == JobType.SOURCE) {
+				if (job.getJobType() == JobType.SUPER_SOURCE) {
 					allocation.setDelay(0);
 					if (job.getExecutionModeList().size() != 1) {
 						throw new IllegalArgumentException("The job (" + job + ")'s executionModeList ("
@@ -800,7 +804,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					}
 					allocation.setExecutionMode(job.getExecutionModeList().get(0));
 					projectToSourceAllocationMap.put(job.getProject(), allocation);
-				} else if (job.getJobType() == JobType.SINK) {
+				} else if (job.getJobType() == JobType.SUPER_SINK) {
 					allocation.setDelay(0);
 					if (job.getExecutionModeList().size() != 1) {
 						throw new IllegalArgumentException("The job (" + job + ")'s executionModeList ("
@@ -840,11 +844,11 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 		}
 
 		private void CascadedDoneDateUpdate(Allocation allocation) {
-			if (allocation.getJobType() != JobType.SOURCE) {
+			if (allocation.getJobType() != JobType.SUPER_SOURCE) {
 				allocation.setPredecessorsDoneDate(allocation.getPredecessorAllocationList().stream()
 						.map(Allocation::getEndDate).reduce(0, (a, b) -> Math.max(a, b)));
 			}
-			if (allocation.getJobType() != JobType.SINK) {
+			if (allocation.getJobType() != JobType.SUPER_SINK) {
 				for (Allocation successorAllocation : allocation.getSuccessorAllocationList()) {
 					CascadedDoneDateUpdate(successorAllocation);
 				}
