@@ -812,7 +812,15 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					}
 					allocation.setExecutionMode(job.getExecutionModeList().get(0));
 					projectToSinkAllocationMap.put(job.getProject(), allocation);
+				} else if (job.getJobType() == JobType.SOURCE || job.getJobType() == JobType.SINK) {
+					allocation.setDelay(0);
+					if (job.getExecutionModeList().size() != 1) {
+						throw new IllegalArgumentException("The job (" + job + ")'s executionModeList ("
+								+ job.getExecutionModeList() + ") is expected to be a singleton.");
+					}
+					allocation.setExecutionMode(job.getExecutionModeList().get(0));					
 				}
+				
 				allocationList.add(allocation);
 				jobToAllocationMap.put(job, allocation);
 			}
