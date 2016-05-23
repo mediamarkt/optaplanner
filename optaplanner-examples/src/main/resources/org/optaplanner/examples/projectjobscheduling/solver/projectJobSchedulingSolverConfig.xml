@@ -22,17 +22,18 @@
     <constructionHeuristicType>FIRST_FIT</constructionHeuristicType>
   </constructionHeuristic>
   <localSearch>
-    <unionMoveSelector>
+  	<unionMoveSelector>
       <changeMoveSelector>
         <valueSelector>
           <variableName>executionMode</variableName>
         </valueSelector>
       </changeMoveSelector>
-      <changeMoveSelector>
-        <valueSelector>
+      <org.optaplanner.examples.projectjobscheduling.core.heuristic.selector.ResourcesRepulsionMoveSelectorConfig>
+        <valueSelectorConfig>
           <variableName>delay</variableName>
-        </valueSelector>
-      </changeMoveSelector>
+        </valueSelectorConfig>
+   	  </org.optaplanner.examples.projectjobscheduling.core.heuristic.selector.ResourcesRepulsionMoveSelectorConfig>     
+      
     </unionMoveSelector>
     <acceptor>
       <entityTabuRatio>0.2</entityTabuRatio>
