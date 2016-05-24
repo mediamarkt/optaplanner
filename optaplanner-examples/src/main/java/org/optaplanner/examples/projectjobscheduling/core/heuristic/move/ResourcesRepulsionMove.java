@@ -31,8 +31,13 @@ public class ResourcesRepulsionMove extends AbstractMove {
 	}
 	
 	private ResourcesRepulsionMove(Change initialChange, List<Change> changes) {
-		this.initialChange = initialChange;
-		this.changes = Lists.reverse(changes);
+		Object oldValue = initialChange.getVariableDescriptor().getValue(initialChange.getEntity());
+		this.initialChange = new Change(initialChange.getEntity(), initialChange.getVariableDescriptor(), oldValue);
+		
+		this.changes = Lists.reverse(changes.stream().map(c -> {
+			Object ov = c.getVariableDescriptor().getValue(c.getEntity());
+			return new Change(c.getEntity(), c.getVariableDescriptor(), ov);
+		}).collect(Collectors.toList()));		
 	}	
 	
 	@Override
