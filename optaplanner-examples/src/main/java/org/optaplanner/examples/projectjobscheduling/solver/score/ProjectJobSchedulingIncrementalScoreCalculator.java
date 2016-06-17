@@ -47,7 +47,6 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 	private int totalMakeSpan;
 	private int totalEndSyncGap;
 	private HashMap<String, Integer> priorityJobDelays;
-	private int unverifiedJobDalays;
 	private int totalCommitmentOverrun;
 	private int totalTimedJobMakespan;
 
@@ -69,7 +68,6 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		totalEndSyncGap = 0;
 		totalCommitmentOverrun = 0;
 		totalTimedJobMakespan = 0;
-		unverifiedJobDalays = 0;
 		priorityJobDelays = new HashMap();
 		int minimumReleaseDate = Integer.MAX_VALUE;
 		for (Project p : projectList) {
@@ -157,16 +155,14 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		}
 		
 		// Priority jobs delay
-		if (allocation.getJob().getPriorityMark() != null) {
-			if(allocation.getJob().isVerified()) {
-				if (!priorityJobDelays.containsKey(allocation.getJob().getPriorityMark())) {
-					priorityJobDelays.put(allocation.getJob().getPriorityMark(), 0);
+		if(allocation.getJob().getJobType() == JobType.SINK || allocation.getJob().getJobType() == JobType.SUPER_SINK){
+			if (allocation.getJob().getPriority() != null) {
+				if (!priorityJobDelays.containsKey(allocation.getJob().getPriority())) {
+					priorityJobDelays.put(allocation.getJob().getPriority(), 0);
 				}
-				priorityJobDelays.compute(allocation.getJob().getPriorityMark(), (a, b) -> b - allocation.getEndDate());				
-			} else {
-				unverifiedJobDalays -= allocation.getEndDate();
+				priorityJobDelays.compute(allocation.getJob().getPriority(), (a, b) -> b - allocation.getEndDate());		
 			}
-		}		
+		}
 
 		// Committed date overruns
 		if (allocation.getJob().getCommittedDay() != 0) {
@@ -227,14 +223,12 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		}
 		
 		// Priority jobs delay
-		if (allocation.getJob().getPriorityMark() != null) {
-			if(allocation.getJob().isVerified()) {
-				if (!priorityJobDelays.containsKey(allocation.getJob().getPriorityMark())) {
-					priorityJobDelays.put(allocation.getJob().getPriorityMark(), 0);
+		if(allocation.getJob().getJobType() == JobType.SINK || allocation.getJob().getJobType() == JobType.SUPER_SINK){
+			if (allocation.getJob().getPriority() != null) {
+				if (!priorityJobDelays.containsKey(allocation.getJob().getPriority())) {
+					priorityJobDelays.put(allocation.getJob().getPriority(), 0);
 				}
-				priorityJobDelays.compute(allocation.getJob().getPriorityMark(), (a, b) -> b + allocation.getEndDate());				
-			} else {
-				unverifiedJobDalays += allocation.getEndDate();				
+				priorityJobDelays.compute(allocation.getJob().getPriority(), (a, b) -> b + allocation.getEndDate());
 			}
 		}
 		
@@ -264,7 +258,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 						priorityJobDelays.containsKey("Major") ? priorityJobDelays.get("Major") : 0,
 						priorityJobDelays.containsKey("Minor") ? priorityJobDelays.get("Minor") : 0,
 						priorityJobDelays.containsKey("Trivial") ? priorityJobDelays.get("Trivial") : 0,
-						unverifiedJobDalays,
+						priorityJobDelays.containsKey("Draft") ? priorityJobDelays.get("Draft") : 0,
 						totalTimedJobMakespan,
 						totalEndSyncGap,
 						totalJobDelay });

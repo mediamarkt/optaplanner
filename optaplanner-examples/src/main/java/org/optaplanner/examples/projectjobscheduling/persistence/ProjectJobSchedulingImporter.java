@@ -132,9 +132,19 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			for (int i = 0; i < prioritiesCount; i++) {
 				String[] tokens = splitBySpacesOrTabs(readStringValue());
 				int priorityJobId = Integer.parseInt(tokens[0]);
-				String priorityName = tokens[1];
+				String priority = tokens[1];
+				String parentPriority = tokens[2];
+				
+				if(parentPriority.equals("Blocker"))
+				{
+					int tmp = 1;
+					tmp = 2;
+				}
+				
 				this.schedule.getJobList().stream().filter(j -> j.getOriginalJobId() == priorityJobId)
-						.forEach(j -> j.setPriorityMark(priorityName));
+						.forEach(j -> {
+							j.setPriority(priority);
+							j.setParentPriority(parentPriority);});
 			}
 			return null;
 		}
@@ -162,29 +172,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			return null;
 		}
 
-	}
-	
-	public static class JobsStatusesFileInputBuilder extends TxtInputBuilder {
-		private Schedule schedule;
-		
-		public JobsStatusesFileInputBuilder(Schedule schedule){
-			this.schedule = schedule;
-		}
-
-		@Override
-		public Solution readSolution() throws IOException {
-			int jobsCount = readIntegerValue("Total priority jobs: ");
-			for (int i = 0; i < jobsCount; i++) {
-				String[] tokens = splitBySpacesOrTabs(readStringValue());
-				int jobId = Integer.parseInt(tokens[0]);
-				String status = tokens[1];
-				this.schedule.getJobList().stream()
-						.filter(j -> j.getOriginalJobId() == jobId && j.getProject().getId() == 0)
-						.forEach(j -> j.setJobStatus(status));
-			}
-			return null;
-		}
-	}
+	}	
 
 	public static void main(String[] args) {
 		new ProjectJobSchedulingImporter().convertAll();
@@ -228,7 +216,6 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			readCommitments();
 			removePointlessExecutionModes();
 			readFixedStartDates();
-			readJobsStatuses();
 			createAllocationList();
 			logger.info(
 					"Schedule {} has {} projects, {} jobs, {} execution modes, {} resources"
@@ -411,42 +398,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 			} finally {
 				IOUtils.closeQuietly(bufferedReader);
 			}
-		}
-		
-		private void readJobsStatuses() {
-			String jobsStatusesFilePath = FilenameUtils.removeExtension(inputFile.getAbsolutePath())
-					+ FilenameUtils.EXTENSION_SEPARATOR_STR + "bps";
-			File jobsStatusesFile = new File(jobsStatusesFilePath);
-			if (!jobsStatusesFile.exists()) {
-				logger.warn("The expected jobs statuses file (" + jobsStatusesFilePath
-						+ ") does not exist. Proceeding without jobs statuses.");
-				return;
-			}
-			BufferedReader bufferedReader = null;
-			try {
-				bufferedReader = new BufferedReader(
-						new InputStreamReader(new FileInputStream(jobsStatusesFile), "UTF-8"));
-
-				JobsStatusesFileInputBuilder jobsStatusesFileInputBuilder = new JobsStatusesFileInputBuilder(
-						schedule);
-				jobsStatusesFileInputBuilder.setInputFile(jobsStatusesFile);
-				jobsStatusesFileInputBuilder.setBufferedReader(bufferedReader);
-				try {
-					jobsStatusesFileInputBuilder.readSolution();
-				} catch (IllegalArgumentException e) {
-					throw new IllegalArgumentException("Exception in jobs statuses file (" + jobsStatusesFilePath + ")",
-							e);
-				} catch (IllegalStateException e) {
-					throw new IllegalStateException("Exception in jobs statuses file (" + jobsStatusesFilePath + ")",
-							e);
-				}
-			} catch (IOException e) {
-				throw new IllegalArgumentException(
-						"Could not read the jobs statuses file (" + jobsStatusesFilePath + ")", e);
-			} finally {
-				IOUtils.closeQuietly(bufferedReader);
-			}
-		}
+		}	
 
 		private void readProjectList() throws IOException {
 			projectListSize = readIntegerValue();
