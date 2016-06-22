@@ -19,7 +19,16 @@
   </termination>
 
   <constructionHeuristic>
-    <constructionHeuristicType>FIRST_FIT</constructionHeuristicType>
+    <!-- <constructionHeuristicType>FIRST_FIT</constructionHeuristicType> -->
+    <queuedEntityPlacer>
+      <entitySelector id="placerEntitySelector">
+        <cacheType>PHASE</cacheType>
+        <selectionOrder>SORTED</selectionOrder>
+        <sorterComparatorClass>org.optaplanner.examples.projectjobscheduling.domain.AllocationsPriorityComparator</sorterComparatorClass>
+        <sorterOrder>DESCENDING</sorterOrder>
+        <entityClass>org.optaplanner.examples.projectjobscheduling.domain.Allocation</entityClass>
+      </entitySelector>
+    </queuedEntityPlacer>
   </constructionHeuristic>
   <localSearch>
   	<unionMoveSelector>

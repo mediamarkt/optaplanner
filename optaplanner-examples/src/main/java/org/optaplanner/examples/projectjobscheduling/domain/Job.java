@@ -36,10 +36,9 @@ public class Job extends AbstractPersistable {
 
     private List<Job> successorJobList;
 	private String priority;
+	private String parentPriority;
 	private int committedProjectDay;
 	
-	private String jobStatus;
-
 	public int getTimingClockStartMarks() {
     	return timingClockStartMarks;
     }
@@ -123,13 +122,20 @@ public class Job extends AbstractPersistable {
         this.successorJobList = successorJobList;
     }
 
-	public void setPriorityMark(String priority) {
+	public void setPriority(String priority) {
 		this.priority = priority;
 	}
 	
-	public String getPriorityMark()
-	{
+	public String getPriority() {
 		return this.priority;
+	}
+	
+	public String getParentPriority() {
+		return this.parentPriority;
+	}
+	
+	public void setParentPriority(String parentPriority) {
+		this.parentPriority = parentPriority;
 	}
 
 	public void setCommittedDay(int committedProjectDay) {
@@ -138,18 +144,6 @@ public class Job extends AbstractPersistable {
 	
 	public int getCommittedDay(){
 		return this.committedProjectDay;
-	}
-
-	public String getJobStatus() {
-		return jobStatus;
-	}
-
-	public void setJobStatus(String jobStatus) {
-		this.jobStatus = jobStatus;
-	}
-	
-	public boolean isVerified()	{
-		return jobStatus != null && (jobStatus.equals("Verified") || jobStatus.equals("InProgress"));
 	}
 
     // ************************************************************************
