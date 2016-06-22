@@ -78,6 +78,10 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			insert(allocation);
 		}
 	}
+	
+	public Map<Resource, ResourceCapacityTracker> getResourceCapacityTrackerMap() {
+		return resourceCapacityTrackerMap;
+	}
 
 	public void beforeEntityAdded(Object entity) {
 		// Do nothing

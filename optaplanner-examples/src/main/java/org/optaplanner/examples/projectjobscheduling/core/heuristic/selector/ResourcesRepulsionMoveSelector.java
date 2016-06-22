@@ -17,6 +17,7 @@
 package org.optaplanner.examples.projectjobscheduling.core.heuristic.selector;
 
 import java.util.Iterator;
+import java.util.Map;
 
 import org.optaplanner.core.impl.domain.variable.descriptor.GenuineVariableDescriptor;
 import org.optaplanner.core.impl.domain.variable.inverserelation.SingletonInverseVariableDemand;
@@ -29,17 +30,24 @@ import org.optaplanner.core.impl.heuristic.selector.common.iterator.AbstractRand
 import org.optaplanner.core.impl.heuristic.selector.entity.EntitySelector;
 import org.optaplanner.core.impl.heuristic.selector.move.generic.GenericMoveSelector;
 import org.optaplanner.core.impl.heuristic.selector.value.ValueSelector;
+import org.optaplanner.core.impl.score.director.ScoreDirector;
+import org.optaplanner.core.impl.score.director.incremental.IncrementalScoreDirector;
 import org.optaplanner.core.impl.solver.scope.DefaultSolverScope;
 import org.optaplanner.examples.projectjobscheduling.core.heuristic.move.ResourcesRepulsionMove;
+import org.optaplanner.examples.projectjobscheduling.domain.resource.Resource;
+import org.optaplanner.examples.projectjobscheduling.solver.score.ProjectJobSchedulingIncrementalScoreCalculator;
+import org.optaplanner.examples.projectjobscheduling.solver.score.capacity.ResourceCapacityTracker;
 
 public class ResourcesRepulsionMoveSelector extends GenericMoveSelector {
 
     protected final EntitySelector entitySelector;
     protected final ValueSelector valueSelector;
     protected final boolean randomSelection;
-
+    
     protected final boolean chained;
     protected SingletonInverseVariableSupply inverseVariableSupply = null;
+    
+    protected ScoreDirector scoreDirector;
 
     public ResourcesRepulsionMoveSelector(EntitySelector entitySelector, ValueSelector valueSelector,
             boolean randomSelection) {
@@ -55,6 +63,9 @@ public class ResourcesRepulsionMoveSelector extends GenericMoveSelector {
     @Override
     public void solvingStarted(DefaultSolverScope solverScope) {
         super.solvingStarted(solverScope);
+        
+        scoreDirector = solverScope.getScoreDirector();
+        
         if (chained) {
             SupplyManager supplyManager = solverScope.getScoreDirector().getSupplyManager();
             inverseVariableSupply = supplyManager.demand(
@@ -65,6 +76,9 @@ public class ResourcesRepulsionMoveSelector extends GenericMoveSelector {
     @Override
     public void solvingEnded(DefaultSolverScope solverScope) {
         super.solvingEnded(solverScope);
+        
+        scoreDirector = null;
+        
         if (chained) {
             inverseVariableSupply = null;
         }
@@ -104,7 +118,7 @@ public class ResourcesRepulsionMoveSelector extends GenericMoveSelector {
                 return new AbstractOriginalChangeIterator<Move>(entitySelector, valueSelector) {
                     @Override
                     protected Move newChangeSelection(Object entity, Object toValue) {
-                        return new ResourcesRepulsionMove(entity, variableDescriptor, toValue);
+                        return new ResourcesRepulsionMove(entity, variableDescriptor, toValue, scoreDirector);
                     }
                 };
             }
@@ -115,7 +129,7 @@ public class ResourcesRepulsionMoveSelector extends GenericMoveSelector {
                 return new AbstractRandomChangeIterator<Move>(entitySelector, valueSelector) {
                     @Override
                     protected Move newChangeSelection(Object entity, Object toValue) {
-                        return new ResourcesRepulsionMove(entity, variableDescriptor, toValue);
+                        return new ResourcesRepulsionMove(entity, variableDescriptor, toValue, scoreDirector);
                     }
                 };
             }

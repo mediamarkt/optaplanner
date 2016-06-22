@@ -3,6 +3,7 @@ package org.optaplanner.examples.projectjobscheduling.core.heuristic.move;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -11,8 +12,11 @@ import org.optaplanner.core.impl.domain.variable.descriptor.GenuineVariableDescr
 import org.optaplanner.core.impl.heuristic.move.AbstractMove;
 import org.optaplanner.core.impl.heuristic.move.Move;
 import org.optaplanner.core.impl.score.director.ScoreDirector;
-
-
+import org.optaplanner.core.impl.score.director.incremental.IncrementalScoreDirector;
+import org.optaplanner.examples.projectjobscheduling.domain.Allocation;
+import org.optaplanner.examples.projectjobscheduling.domain.resource.Resource;
+import org.optaplanner.examples.projectjobscheduling.solver.score.ProjectJobSchedulingIncrementalScoreCalculator;
+import org.optaplanner.examples.projectjobscheduling.solver.score.capacity.ResourceCapacityTracker;
 
 import com.google.common.collect.Lists;
 
@@ -22,13 +26,42 @@ public class ResourcesRepulsionMove extends AbstractMove {
 	private List<Change> changes;
 		
 	public ResourcesRepulsionMove(Object entity, GenuineVariableDescriptor variableDescriptor,
-            Object toPlanningValue) {
+            Object toPlanningValue, ScoreDirector scoreDirector) {
 		
-		changes = new ArrayList<Change>();		
+		changes = new ArrayList<Change>();
 		initialChange = new Change(entity, variableDescriptor, toPlanningValue);
-		changes.add(initialChange);
-		//TODO get resources repulsion moves.
+		
+		Collection<ResourceCapacityTracker> resourceCapacityTrackers = ((ProjectJobSchedulingIncrementalScoreCalculator)((IncrementalScoreDirector)scoreDirector).getIncrementalScoreCalculator()).getResourceCapacityTrackerMap().values();
+		
+		if(resourceCapacityTrackers.stream().anyMatch(tracker -> tracker.getHardScore() != 0)) {
+			changes.add(initialChange);
+		} else {
+			RecursivlyAddChanges((Allocation)entity, variableDescriptor, toPlanningValue, scoreDirector, resourceCapacityTrackers);			
+		}		
 	}
+	
+	private void RecursivlyAddChanges(Allocation entity, GenuineVariableDescriptor variableDescriptor,
+            Object toPlanningValue, ScoreDirector scoreDirector, Collection<ResourceCapacityTracker> resourceCapacityTrackers) {
+		changes.add(new Change(entity, variableDescriptor, toPlanningValue));
+		Object oldValue = variableDescriptor.getValue(entity);
+		
+		//Do move for see result
+		scoreDirector.beforeVariableChanged(variableDescriptor, entity);
+		variableDescriptor.setValue(entity, toPlanningValue);
+        scoreDirector.afterVariableChanged(variableDescriptor, entity);
+        
+        if(resourceCapacityTrackers.stream().anyMatch(tracker -> tracker.getHardScore() != 0)) {
+        	//TODO find and move earliest issue for fix capacity problem, recursive add new change
+        	
+        	
+        }
+        
+        //Do undo move
+        scoreDirector.beforeVariableChanged(variableDescriptor, entity);
+		variableDescriptor.setValue(entity, oldValue);
+        scoreDirector.afterVariableChanged(variableDescriptor, entity);        
+	}
+	
 	
 	private ResourcesRepulsionMove(Change initialChange, List<Change> changes) {
 		Object oldValue = initialChange.getVariableDescriptor().getValue(initialChange.getEntity());
