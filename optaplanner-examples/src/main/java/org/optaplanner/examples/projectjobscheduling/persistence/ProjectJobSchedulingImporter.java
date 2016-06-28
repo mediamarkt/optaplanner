@@ -49,6 +49,7 @@ import org.optaplanner.examples.projectjobscheduling.domain.Schedule;
 import org.optaplanner.examples.projectjobscheduling.domain.resource.GlobalResource;
 import org.optaplanner.examples.projectjobscheduling.domain.resource.LocalResource;
 import org.optaplanner.examples.projectjobscheduling.domain.resource.Resource;
+import org.optaplanner.examples.projectjobscheduling.domain.resource.ResourceLeave;
 import org.optaplanner.examples.projectjobscheduling.persistence.ProjectJobSchedulingImporter.EndSyncClockMarksFileInputBuilder;
 
 public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
@@ -436,6 +437,27 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					resourceId++;
 				}
 			}
+			
+			for (int i = 0; i < resourceListSize; i++) {
+				int leavesCount = readIntegerValue("Leaves: ");
+				
+				List<ResourceLeave> resourceLeaves = new ArrayList<ResourceLeave>();
+				
+				for(int j = 0; j < leavesCount; j++) {
+					String[] leavesTokens = splitBySpacesOrTabs(readStringValue(), 3);
+					int start = Integer.parseInt(leavesTokens[1]);
+					int end = Integer.parseInt(leavesTokens[2]);
+					
+					ResourceLeave resourceLeave = new ResourceLeave();
+					resourceLeave.setStart(start);
+					resourceLeave.setEnd(end);
+					
+					resourceLeaves.add(resourceLeave);
+				}
+				
+				resourceList.get(i).setResourceLeaves(resourceLeaves);
+			}
+			
 			globalResourceListSize = resourceList.size();
 			schedule.setResourceList(resourceList);
 			schedule.setResourceRequirementList(

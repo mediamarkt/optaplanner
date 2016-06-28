@@ -54,9 +54,16 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		List<Resource> resourceList = schedule.getResourceList();
 		resourceCapacityTrackerMap = new HashMap<Resource, ResourceCapacityTracker>(resourceList.size());
 		for (Resource resource : resourceList) {
-			resourceCapacityTrackerMap.put(resource,
-					resource.isRenewable() ? new RenewableResourceCapacityTracker(resource)
-							: new NonrenewableResourceCapacityTracker(resource));
+			ResourceCapacityTracker tracker;
+			if(resource.isRenewable()) {
+				RenewableResourceCapacityTracker renewableResourceCapacityTracker = new RenewableResourceCapacityTracker(resource);
+				renewableResourceCapacityTracker.setLeaves(resource.getResourceLeaves());
+				tracker = renewableResourceCapacityTracker;
+			} else {
+				tracker = new NonrenewableResourceCapacityTracker(resource);
+			}
+						
+			resourceCapacityTrackerMap.put(resource, tracker);
 		}
 		List<Project> projectList = schedule.getProjectList();
 		projectEndDateMap = new HashMap<Project, Integer>(projectList.size());

@@ -18,6 +18,9 @@ package org.optaplanner.examples.projectjobscheduling.domain.resource;
 
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamInclude;
+
+import java.util.List;
+
 import org.optaplanner.examples.common.domain.AbstractPersistable;
 
 @XStreamAlias("PjsResource")
@@ -28,6 +31,7 @@ import org.optaplanner.examples.common.domain.AbstractPersistable;
 public abstract class Resource extends AbstractPersistable {
 
     private int capacity;
+    private List<ResourceLeave> resourceLeaves;
 
     public int getCapacity() {
         return capacity;
@@ -43,4 +47,11 @@ public abstract class Resource extends AbstractPersistable {
 
     public abstract boolean isRenewable();
 
+	public List<ResourceLeave> getResourceLeaves() {
+		return resourceLeaves;
+	}
+
+	public void setResourceLeaves(List<ResourceLeave> resourceLeaves) {
+		this.resourceLeaves = resourceLeaves;
+	}    
 }

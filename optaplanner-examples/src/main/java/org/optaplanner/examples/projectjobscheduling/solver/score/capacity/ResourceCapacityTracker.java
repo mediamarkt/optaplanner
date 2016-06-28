@@ -31,7 +31,6 @@ public abstract class ResourceCapacityTracker {
     public abstract void insert(ResourceRequirement resourceRequirement, Allocation allocation);
 
     public abstract void retract(ResourceRequirement resourceRequirement, Allocation allocation);
-
+    
     public abstract int getHardScore();
-
 }
