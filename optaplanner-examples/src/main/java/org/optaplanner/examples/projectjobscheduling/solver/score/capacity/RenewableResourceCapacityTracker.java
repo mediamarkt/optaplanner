@@ -90,7 +90,7 @@ public class RenewableResourceCapacityTracker extends ResourceCapacityTracker {
     	for(ResourceLeave leave : resourceLeaves) {
     		int startDate = leave.getStart();
     		int endDate = leave.getEnd();
-    		int requirement = 1;
+    		int requirement = leave.getRequirement();
     		
     		if(startDate > endDate) continue;
     		

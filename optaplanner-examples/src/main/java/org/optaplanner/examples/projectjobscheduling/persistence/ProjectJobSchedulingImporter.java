@@ -444,13 +444,15 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 				List<ResourceLeave> resourceLeaves = new ArrayList<ResourceLeave>();
 				
 				for(int j = 0; j < leavesCount; j++) {
-					String[] leavesTokens = splitBySpacesOrTabs(readStringValue(), 3);
+					String[] leavesTokens = splitBySpacesOrTabs(readStringValue(), 4);
 					int start = Integer.parseInt(leavesTokens[1]);
 					int end = Integer.parseInt(leavesTokens[2]);
+					int requirement = Integer.parseInt(leavesTokens[3]);
 					
 					ResourceLeave resourceLeave = new ResourceLeave();
 					resourceLeave.setStart(start);
 					resourceLeave.setEnd(end);
+					resourceLeave.setRequirement(requirement);
 					
 					resourceLeaves.add(resourceLeave);
 				}
