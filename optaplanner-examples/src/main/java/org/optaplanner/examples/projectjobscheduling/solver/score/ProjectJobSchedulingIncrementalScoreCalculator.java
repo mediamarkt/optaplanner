@@ -16,7 +16,6 @@
 
 package org.optaplanner.examples.projectjobscheduling.solver.score;
 
-import java.io.Console;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +36,10 @@ import org.optaplanner.examples.projectjobscheduling.solver.score.capacity.Resou
 
 public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncrementalScoreCalculator<Schedule> {
 
+	public ProjectJobSchedulingIncrementalScoreCalculator(int unallowedWeeksCountForDraftJobs) {
+		this.unallowedWeeksCountForDraftJobs = unallowedWeeksCountForDraftJobs;
+	}	
+	
 	private Map<Resource, ResourceCapacityTracker> resourceCapacityTrackerMap;
 	private Map<Project, Integer> projectEndDateMap;
 	private int maximumProjectEndDate;
@@ -49,6 +52,10 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 	private HashMap<String, Integer> priorityJobDelays;
 	private int totalCommitmentOverrun;
 	private int totalTimedJobMakespan;
+	
+	private int draftEarlyStarted;
+	
+	private int unallowedWeeksCountForDraftJobs;
 
 	public void resetWorkingSolution(Schedule schedule) {
 		List<Resource> resourceList = schedule.getResourceList();
@@ -75,6 +82,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		totalEndSyncGap = 0;
 		totalCommitmentOverrun = 0;
 		totalTimedJobMakespan = 0;
+		draftEarlyStarted = 0;
 		priorityJobDelays = new HashMap();
 		int minimumReleaseDate = Integer.MAX_VALUE;
 		for (Project p : projectList) {
@@ -176,6 +184,13 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			totalCommitmentOverrun -= (allocation.getEndDate() > allocation.getJob().getCommittedDay())
 					? allocation.getEndDate() - allocation.getJob().getCommittedDay() : 0;
 		}
+		
+		if(allocation.getJob().getJobType() == JobType.STANDARD) {
+			if("Draft".equals(allocation.getJob().getPriority())) {
+				int delay = allocation.getDelay() != null ? allocation.getDelay() : 0;
+				draftEarlyStarted -= Math.max(unallowedWeeksCountForDraftJobs * 5 - (delay + allocation.getPredecessorsDoneDate()), 0);
+			}
+		}
 	}
 
 	private void retract(Allocation allocation) {
@@ -244,6 +259,13 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			totalCommitmentOverrun += (allocation.getEndDate() > allocation.getJob().getCommittedDay())
 					? allocation.getEndDate() - allocation.getJob().getCommittedDay() : 0;
 		}
+				
+		if(allocation.getJobType() == JobType.STANDARD) {
+			if("Draft".equals(allocation.getJob().getPriority())) {
+				int delay = allocation.getDelay() != null ? allocation.getDelay() : 0;
+				draftEarlyStarted += Math.max(unallowedWeeksCountForDraftJobs * 5 - (delay + allocation.getPredecessorsDoneDate()), 0);
+			}
+		}
 	}
 
 	private void updateMaximumProjectEndDate() {
@@ -257,7 +279,9 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 	}
 
 	public Score calculateScore() {
-		return BendableScore.valueOf(new int[] { resourceCapcityViolations },
+		return BendableScore.valueOf(
+				new int[] { resourceCapcityViolations,
+						draftEarlyStarted },
 				new int[] { totalCommitmentOverrun,
 						priorityJobDelays.containsKey("Blocker") ? priorityJobDelays.get("Blocker") : 0,
 						priorityJobDelays.containsKey("Critical") ? priorityJobDelays.get("Critical") : 0,

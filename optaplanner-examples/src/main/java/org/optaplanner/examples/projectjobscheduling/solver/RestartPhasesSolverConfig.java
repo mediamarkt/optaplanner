@@ -13,6 +13,7 @@ import org.optaplanner.core.impl.score.director.InnerScoreDirectorFactory;
 import org.optaplanner.core.impl.solver.BasicPlumbingTermination;
 import org.optaplanner.core.impl.solver.recaller.BestSolutionRecaller;
 import org.optaplanner.core.impl.solver.termination.Termination;
+import org.optaplanner.examples.projectjobscheduling.solver.score.ProjectJobSchedulingScoreDirectorFactoryConfig;
 
 public class RestartPhasesSolverConfig extends SolverConfig {
 	@Override
@@ -44,4 +45,6 @@ public class RestartPhasesSolverConfig extends SolverConfig {
         solver.setPhaseList(buildPhaseList(configPolicy, bestSolutionRecaller, termination));
         return solver;
 	}
+	
+	protected ProjectJobSchedulingScoreDirectorFactoryConfig scoreDirectorFactoryConfig = null;
 }

@@ -8,8 +8,9 @@
 <!--   </exhaustiveSearch> -->
   <scoreDirectorFactory>
     <!-- BENDABLE --><scoreDefinitionType>BENDABLE</scoreDefinitionType>
-    <bendableHardLevelsSize>1</bendableHardLevelsSize>
+    <bendableHardLevelsSize>2</bendableHardLevelsSize>
     <bendableSoftLevelsSize>11</bendableSoftLevelsSize>
+    <unallowedWeeksCountForDraft>4</unallowedWeeksCountForDraft>
      <incrementalScoreCalculatorClass>org.optaplanner.examples.projectjobscheduling.solver.score.ProjectJobSchedulingIncrementalScoreCalculator</incrementalScoreCalculatorClass>
 <!--     <scoreDrl>org/optaplanner/examples/projectjobscheduling/solver/projectJobSchedulingScoreRules.drl</scoreDrl> -->
   </scoreDirectorFactory>
