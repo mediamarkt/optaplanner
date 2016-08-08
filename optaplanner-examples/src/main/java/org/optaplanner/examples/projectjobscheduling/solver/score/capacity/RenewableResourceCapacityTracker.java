@@ -17,11 +17,13 @@
 package org.optaplanner.examples.projectjobscheduling.solver.score.capacity;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.optaplanner.examples.projectjobscheduling.domain.Allocation;
 import org.optaplanner.examples.projectjobscheduling.domain.ResourceRequirement;
 import org.optaplanner.examples.projectjobscheduling.domain.resource.Resource;
+import org.optaplanner.examples.projectjobscheduling.domain.resource.ResourceLeave;
 
 public class RenewableResourceCapacityTracker extends ResourceCapacityTracker {
 
@@ -80,6 +82,33 @@ public class RenewableResourceCapacityTracker extends ResourceCapacityTracker {
             }
             usedPerDay.put(i, used);
         }
+    }
+    
+    public void setLeaves(List<ResourceLeave> resourceLeaves) {
+    	if(resourceLeaves == null) return;
+    	
+    	for(ResourceLeave leave : resourceLeaves) {
+    		int startDate = leave.getStart();
+    		int endDate = leave.getEnd();
+    		int requirement = leave.getRequirement();
+    		
+    		if(startDate > endDate) continue;
+    		
+    		for (int i = startDate; i < endDate; i++) {
+                Integer used = usedPerDay.get(i);
+                if (used == null) {
+                    used = 0;
+                }
+                if (used > capacityEveryDay) {
+                    hardScore += (used - capacityEveryDay);
+                }
+                used += requirement;
+                if (used > capacityEveryDay) {
+                    hardScore -= (used - capacityEveryDay);
+                }
+                usedPerDay.put(i, used);
+            }
+    	}
     }
 
     @Override

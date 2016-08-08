@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<solver>
+<org.optaplanner.examples.projectjobscheduling.solver.RestartPhasesSolverConfig>
   <environmentMode>FAST_ASSERT</environmentMode>
   <solutionClass>org.optaplanner.examples.projectjobscheduling.domain.Schedule</solutionClass>
   <entityClass>org.optaplanner.examples.projectjobscheduling.domain.Allocation</entityClass>
@@ -8,8 +8,9 @@
 <!--   </exhaustiveSearch> -->
   <scoreDirectorFactory>
     <!-- BENDABLE --><scoreDefinitionType>BENDABLE</scoreDefinitionType>
-    <bendableHardLevelsSize>1</bendableHardLevelsSize>
+    <bendableHardLevelsSize>2</bendableHardLevelsSize>
     <bendableSoftLevelsSize>11</bendableSoftLevelsSize>
+    <unallowedWeeksCountForDraft>4</unallowedWeeksCountForDraft>
      <incrementalScoreCalculatorClass>org.optaplanner.examples.projectjobscheduling.solver.score.ProjectJobSchedulingIncrementalScoreCalculator</incrementalScoreCalculatorClass>
 <!--     <scoreDrl>org/optaplanner/examples/projectjobscheduling/solver/projectJobSchedulingScoreRules.drl</scoreDrl> -->
   </scoreDirectorFactory>
@@ -51,5 +52,8 @@
     <forager>
       <acceptedCountLimit>4</acceptedCountLimit>
     </forager>
+    <termination>
+		<unimprovedMinutesSpentLimit>2</unimprovedMinutesSpentLimit>        
+ 	</termination>    
   </localSearch>
-</solver>
+</org.optaplanner.examples.projectjobscheduling.solver.RestartPhasesSolverConfig>
