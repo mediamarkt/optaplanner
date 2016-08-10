@@ -10,20 +10,23 @@ import org.optaplanner.core.impl.score.director.incremental.IncrementalScoreDire
 public class ProjectJobShedulingIncrementalScoreDirectorFactory extends IncrementalScoreDirectorFactory {
 
 	protected int unallowedWeeksCountForDraft;
+	protected int unallowedWeeksCountForAnalysis;
+	
 	private Class<? extends IncrementalScoreCalculator> incrementalScoreCalculatorClass;
 	
 	public ProjectJobShedulingIncrementalScoreDirectorFactory(
-			Class<? extends IncrementalScoreCalculator> incrementalScoreCalculatorClass, int unallowedWeeksCountForDraft) {
+			Class<? extends IncrementalScoreCalculator> incrementalScoreCalculatorClass, int unallowedWeeksCountForDraft, int unallowedWeeksCountForAnalysis) {
 		super(incrementalScoreCalculatorClass);
 		
 		this.incrementalScoreCalculatorClass = incrementalScoreCalculatorClass; 
 		this.unallowedWeeksCountForDraft = unallowedWeeksCountForDraft;
+		this.unallowedWeeksCountForAnalysis = unallowedWeeksCountForAnalysis;
 	}
 	
 	public IncrementalScoreDirector buildScoreDirector(boolean constraintMatchEnabledPreference) {
         IncrementalScoreCalculator incrementalScoreCalculator;
 		try {
-			incrementalScoreCalculator = incrementalScoreCalculatorClass.getDeclaredConstructor(int.class).newInstance(unallowedWeeksCountForDraft);
+			incrementalScoreCalculator = incrementalScoreCalculatorClass.getDeclaredConstructor(int.class, int.class).newInstance(unallowedWeeksCountForDraft, unallowedWeeksCountForAnalysis);
 		} catch (Exception e) {
 			throw new IllegalArgumentException("The " + this.getClass().getSimpleName() + "'s " +  "incrementalScoreCalculatorClass" + " ("
                     + incrementalScoreCalculatorClass.getName() + ") was not created.", e);

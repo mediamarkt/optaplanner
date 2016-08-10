@@ -36,8 +36,9 @@ import org.optaplanner.examples.projectjobscheduling.solver.score.capacity.Resou
 
 public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncrementalScoreCalculator<Schedule> {
 
-	public ProjectJobSchedulingIncrementalScoreCalculator(int unallowedWeeksCountForDraftJobs) {
-		this.unallowedWeeksCountForDraftJobs = unallowedWeeksCountForDraftJobs;
+	public ProjectJobSchedulingIncrementalScoreCalculator(int unallowedWeeksCountForDraft, int unallowedWeeksCountForAnalysis) {
+		this.unallowedWeeksCountForDraft = unallowedWeeksCountForDraft;
+		this.unallowedWeeksCountForAnalysis = unallowedWeeksCountForAnalysis;
 	}	
 	
 	private Map<Resource, ResourceCapacityTracker> resourceCapacityTrackerMap;
@@ -55,7 +56,8 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 	
 	private int draftEarlyStarted;
 	
-	private int unallowedWeeksCountForDraftJobs;
+	private int unallowedWeeksCountForDraft;
+	private int unallowedWeeksCountForAnalysis;
 
 	public void resetWorkingSolution(Schedule schedule) {
 		List<Resource> resourceList = schedule.getResourceList();
@@ -192,7 +194,10 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		if(allocation.getJob().getJobType() == JobType.STANDARD) {
 			if("Draft".equals(allocation.getJob().getPriority())) {
 				int delay = allocation.getDelay() != null ? allocation.getDelay() : 0;
-				draftEarlyStarted -= Math.max(unallowedWeeksCountForDraftJobs * 5 - (delay + allocation.getPredecessorsDoneDate()), 0);
+				draftEarlyStarted -= Math.max(unallowedWeeksCountForDraft * 5 - (delay + allocation.getPredecessorsDoneDate()), 0);
+			} else if("Analysis".equals(allocation.getJob().getPriority())) {
+				int delay = allocation.getDelay() != null ? allocation.getDelay() : 0;
+				draftEarlyStarted -= Math.max(unallowedWeeksCountForAnalysis * 5 - (delay + allocation.getPredecessorsDoneDate()), 0);
 			}
 		}
 	}
@@ -267,7 +272,10 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		if(allocation.getJobType() == JobType.STANDARD) {
 			if("Draft".equals(allocation.getJob().getPriority())) {
 				int delay = allocation.getDelay() != null ? allocation.getDelay() : 0;
-				draftEarlyStarted += Math.max(unallowedWeeksCountForDraftJobs * 5 - (delay + allocation.getPredecessorsDoneDate()), 0);
+				draftEarlyStarted += Math.max(unallowedWeeksCountForDraft * 5 - (delay + allocation.getPredecessorsDoneDate()), 0);
+			} else if("Analysis".equals(allocation.getJob().getPriority())) {
+				int delay = allocation.getDelay() != null ? allocation.getDelay() : 0;
+				draftEarlyStarted += Math.max(unallowedWeeksCountForAnalysis * 5 - (delay + allocation.getPredecessorsDoneDate()), 0);
 			}
 		}
 	}
@@ -293,6 +301,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 						priorityJobDelays.containsKey("Major") ? priorityJobDelays.get("Major") : 0,
 						priorityJobDelays.containsKey("Minor") ? priorityJobDelays.get("Minor") : 0,
 						priorityJobDelays.containsKey("Trivial") ? priorityJobDelays.get("Trivial") : 0,
+						priorityJobDelays.containsKey("Analysis") ? priorityJobDelays.get("Analysis") : 0,
 						priorityJobDelays.containsKey("Draft") ? priorityJobDelays.get("Draft") : 0,
 						totalTimedJobMakespan,
 						totalEndSyncGap,
