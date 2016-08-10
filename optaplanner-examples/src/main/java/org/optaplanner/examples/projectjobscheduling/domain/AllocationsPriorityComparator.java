@@ -18,11 +18,12 @@ public class AllocationsPriorityComparator implements Comparator<Allocation>  {
 		
 		switch (priority)
 		{
-			case "Trivial": return 5;
-			case "Minor":return 10;
-			case "Major": return 15;
-			case "Critical": return 20;
-			case "Blocker":return 25;
+			case "Analysis": return 5;
+			case "Trivial": return 10;
+			case "Minor":return 15;
+			case "Major": return 20;
+			case "Critical": return 25;
+			case "Blocker":return 30;
 			default: return 0;
 		}
 	}

@@ -9,6 +9,7 @@ import com.thoughtworks.xstream.annotations.XStreamAlias;
 public class ProjectJobSchedulingScoreDirectorFactoryConfig extends ScoreDirectorFactoryConfig {
 	
 	protected int unallowedWeeksCountForDraft;
+	protected int unallowedWeeksCountForAnalysis;
 	
 	@Override
 	protected AbstractScoreDirectorFactory buildIncrementalScoreDirectorFactory(){
@@ -18,7 +19,7 @@ public class ProjectJobSchedulingScoreDirectorFactoryConfig extends ScoreDirecto
                         "The incrementalScoreCalculatorClass (" + incrementalScoreCalculatorClass
                         + ") does not implement " + IncrementalScoreCalculator.class.getSimpleName() + ".");
             }
-            return new ProjectJobShedulingIncrementalScoreDirectorFactory(incrementalScoreCalculatorClass, unallowedWeeksCountForDraft);
+            return new ProjectJobShedulingIncrementalScoreDirectorFactory(incrementalScoreCalculatorClass, unallowedWeeksCountForDraft, unallowedWeeksCountForAnalysis);
         } else {
             return null;
         }
@@ -30,5 +31,13 @@ public class ProjectJobSchedulingScoreDirectorFactoryConfig extends ScoreDirecto
 
 	public void setUnallowedWeeksCountForDraft(int unallowedWeeksCountForDraft) {
 		this.unallowedWeeksCountForDraft = unallowedWeeksCountForDraft;
+	}
+	
+	public int getUnallowedWeeksCountForAnalysis() {
+		return unallowedWeeksCountForAnalysis;
+	}
+
+	public void setUnallowedWeeksCountForAnalysis(int unallowedWeeksCountForAnalysis) {
+		this.unallowedWeeksCountForAnalysis = unallowedWeeksCountForAnalysis;
 	}
 }
