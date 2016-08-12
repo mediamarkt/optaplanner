@@ -54,7 +54,7 @@
       <acceptedCountLimit>4</acceptedCountLimit>
     </forager>
     <termination>
-		<unimprovedMinutesSpentLimit>2</unimprovedMinutesSpentLimit>        
+		<unimprovedMinutesSpentLimit>2</unimprovedMinutesSpentLimit>
  	</termination>    
   </localSearch>
 </org.optaplanner.examples.projectjobscheduling.solver.RestartPhasesSolverConfig>

@@ -33,6 +33,7 @@ import org.optaplanner.examples.projectjobscheduling.domain.resource.Resource;
 import org.optaplanner.examples.projectjobscheduling.solver.score.capacity.NonrenewableResourceCapacityTracker;
 import org.optaplanner.examples.projectjobscheduling.solver.score.capacity.RenewableResourceCapacityTracker;
 import org.optaplanner.examples.projectjobscheduling.solver.score.capacity.ResourceCapacityTracker;
+import org.optaplanner.examples.projectjobscheduling.solver.score.capacity.TeamResourceCapacityTracker;
 
 public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncrementalScoreCalculator<Schedule> {
 
@@ -65,7 +66,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		for (Resource resource : resourceList) {
 			ResourceCapacityTracker tracker;
 			if(resource.isRenewable()) {
-				RenewableResourceCapacityTracker renewableResourceCapacityTracker = new RenewableResourceCapacityTracker(resource);
+				TeamResourceCapacityTracker renewableResourceCapacityTracker = new TeamResourceCapacityTracker(resource);
 				renewableResourceCapacityTracker.setLeaves(resource.getResourceLeaves());
 				tracker = renewableResourceCapacityTracker;
 			} else {
@@ -292,9 +293,8 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 
 	public Score calculateScore() {
 		return BendableScore.valueOf(
-				new int[] { resourceCapcityViolations,
-						draftEarlyStarted },
-				new int[] { totalCommitmentOverrun,
+				new int[] { resourceCapcityViolations, draftEarlyStarted },
+				new int[] {totalCommitmentOverrun,
 						priorityJobDelays.containsKey("Blocker") ? priorityJobDelays.get("Blocker") : 0,
 						priorityJobDelays.containsKey("Critical") ? priorityJobDelays.get("Critical") : 0,
 						totalProjectDelay,

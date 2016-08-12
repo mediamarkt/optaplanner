@@ -160,6 +160,26 @@ public class Allocation extends AbstractPersistable {
         return "Job " + job.getId();
     }
 
+    public int calculatePriorityWeight() {
+        return getPriorityCoefficient(getJob().getParentPriority()) * 10 + getPriorityCoefficient(getJob().getPriority());
+    }
+
+    private int getPriorityCoefficient(String priority) {
+        if(priority == null)
+            return 0;
+
+        switch (priority)
+        {
+            case "Analysis": return 5;
+            case "Trivial": return 10;
+            case "Minor":return 15;
+            case "Major": return 20;
+            case "Critical": return 25;
+            case "Blocker":return 30;
+            default: return 0;
+        }
+    }
+
     // ************************************************************************
     // Ranges
     // ************************************************************************
@@ -173,5 +193,7 @@ public class Allocation extends AbstractPersistable {
     public CountableValueRange<Integer> getDelayRange() {
         return ValueRangeFactory.createIntValueRange(0, 500);
     }
+
+
 
 }
