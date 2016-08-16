@@ -16,7 +16,7 @@
 <!--     <scoreDrl>org/optaplanner/examples/projectjobscheduling/solver/projectJobSchedulingScoreRules.drl</scoreDrl> -->
   </scoreDirectorFactory>
   <termination>
-    <secondsSpentLimit>36000</secondsSpentLimit>
+    <hoursSpentLimit>3</hoursSpentLimit>
     <unimprovedMinutesSpentLimit>20</unimprovedMinutesSpentLimit>
   </termination>
 
