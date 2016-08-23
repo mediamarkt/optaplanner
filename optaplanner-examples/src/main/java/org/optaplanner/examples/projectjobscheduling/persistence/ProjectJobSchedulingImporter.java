@@ -613,9 +613,13 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					} else if(jobType == 1) {
 						job.setJobType(JobType.SUPER_SINK);
 					} else if(jobType == 2) {
-						job.setJobType(JobType.SOURCE);
+						job.setJobType(JobType.BREQ_SOURCE);
 					} else if(jobType == 3) {
-						job.setJobType(JobType.SINK);
+						job.setJobType(JobType.BREQ_SINK);
+					} else if(jobType == 4) {
+						job.setJobType(JobType.PREQ_SOURCE);
+					} else if(jobType == 5) {
+						job.setJobType(JobType.PREQ_SINK);
 					} else {
 						job.setJobType(JobType.STANDARD);
 					}
@@ -788,7 +792,7 @@ public class ProjectJobSchedulingImporter extends AbstractTxtSolutionImporter {
 					}
 					allocation.setExecutionMode(job.getExecutionModeList().get(0));
 					projectToSinkAllocationMap.put(job.getProject(), allocation);
-				} else if (job.getJobType() == JobType.SOURCE || job.getJobType() == JobType.SINK) {
+				} else if (job.getJobType() == JobType.BREQ_SOURCE || job.getJobType() == JobType.BREQ_SINK || job.getJobType() == JobType.PREQ_SOURCE || job.getJobType() == JobType.PREQ_SINK) {
 					allocation.setDelay(0);
 					if (job.getExecutionModeList().size() != 1) {
 						throw new IllegalArgumentException("The job (" + job + ")'s executionModeList ("

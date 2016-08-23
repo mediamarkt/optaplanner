@@ -51,7 +51,8 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 	private int totalJobDelay;
 	private int totalMakeSpan;
 	private int totalEndSyncGap;
-	private HashMap<String, Integer> priorityJobDelays;
+	private HashMap<String, Integer> priorityBreqJobDelays;
+	private HashMap<String, Integer> priorityPreqJobDelays;
 	private int totalCommitmentOverrun;
 	private int totalTimedJobMakespan;
 	
@@ -86,7 +87,8 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		totalCommitmentOverrun = 0;
 		totalTimedJobMakespan = 0;
 		draftEarlyStarted = 0;
-		priorityJobDelays = new HashMap();
+		priorityBreqJobDelays = new HashMap();
+		priorityPreqJobDelays = new HashMap();
 		int minimumReleaseDate = Integer.MAX_VALUE;
 		for (Project p : projectList) {
 			minimumReleaseDate = Math.min(p.getReleaseDate(), minimumReleaseDate);
@@ -176,13 +178,23 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			totalTimedJobMakespan -= allocation.getEndDate() * allocation.getJob().getTimingClockEndMarks();
 		}
 		
-		// Priority jobs delay
-		if(allocation.getJob().getJobType() == JobType.SINK || allocation.getJob().getJobType() == JobType.SUPER_SINK){
+		//Priority BREQ jobs delay
+		if(allocation.getJob().getJobType() == JobType.BREQ_SINK){
 			if (allocation.getJob().getPriority() != null) {
-				if (!priorityJobDelays.containsKey(allocation.getJob().getPriority())) {
-					priorityJobDelays.put(allocation.getJob().getPriority(), 0);
+				if (!priorityBreqJobDelays.containsKey(allocation.getJob().getPriority())) {
+					priorityBreqJobDelays.put(allocation.getJob().getPriority(), 0);
 				}
-				priorityJobDelays.compute(allocation.getJob().getPriority(), (a, b) -> b - allocation.getEndDate());		
+				priorityBreqJobDelays.compute(allocation.getJob().getPriority(), (a, b) -> b - allocation.getEndDate());
+			}
+		}
+
+		//Priority PREQ jobs delay
+		if(allocation.getJob().getJobType() == JobType.PREQ_SINK){
+			if (allocation.getJob().getPriority() != null) {
+				if (!priorityPreqJobDelays.containsKey(allocation.getJob().getPriority())) {
+					priorityPreqJobDelays.put(allocation.getJob().getPriority(), 0);
+				}
+				priorityPreqJobDelays.compute(allocation.getJob().getPriority(), (a, b) -> b - allocation.getEndDate());
 			}
 		}
 
@@ -254,13 +266,23 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			totalTimedJobMakespan += allocation.getEndDate() * allocation.getJob().getTimingClockEndMarks();
 		}
 		
-		// Priority jobs delay
-		if(allocation.getJob().getJobType() == JobType.SINK || allocation.getJob().getJobType() == JobType.SUPER_SINK){
+		// Priority BREQ jobs delay
+		if(allocation.getJob().getJobType() == JobType.BREQ_SINK){
 			if (allocation.getJob().getPriority() != null) {
-				if (!priorityJobDelays.containsKey(allocation.getJob().getPriority())) {
-					priorityJobDelays.put(allocation.getJob().getPriority(), 0);
+				if (!priorityBreqJobDelays.containsKey(allocation.getJob().getPriority())) {
+					priorityBreqJobDelays.put(allocation.getJob().getPriority(), 0);
 				}
-				priorityJobDelays.compute(allocation.getJob().getPriority(), (a, b) -> b + allocation.getEndDate());
+				priorityBreqJobDelays.compute(allocation.getJob().getPriority(), (a, b) -> b + allocation.getEndDate());
+			}
+		}
+
+		// Priority PREQ jobs delay
+		if(allocation.getJob().getJobType() == JobType.PREQ_SINK){
+			if (allocation.getJob().getPriority() != null) {
+				if (!priorityPreqJobDelays.containsKey(allocation.getJob().getPriority())) {
+					priorityPreqJobDelays.put(allocation.getJob().getPriority(), 0);
+				}
+				priorityPreqJobDelays.compute(allocation.getJob().getPriority(), (a, b) -> b + allocation.getEndDate());
 			}
 		}
 		
@@ -295,14 +317,22 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		return BendableScore.valueOf(
 				new int[] { resourceCapcityViolations, draftEarlyStarted },
 				new int[] {totalCommitmentOverrun,
-						priorityJobDelays.containsKey("Blocker") ? priorityJobDelays.get("Blocker") : 0,
-						priorityJobDelays.containsKey("Critical") ? priorityJobDelays.get("Critical") : 0,
+						priorityBreqJobDelays.containsKey("Blocker") ? priorityBreqJobDelays.get("Blocker") : 0,
+						priorityBreqJobDelays.containsKey("Critical") ? priorityBreqJobDelays.get("Critical") : 0,
 						totalProjectDelay,
-						priorityJobDelays.containsKey("Major") ? priorityJobDelays.get("Major") : 0,
-						priorityJobDelays.containsKey("Minor") ? priorityJobDelays.get("Minor") : 0,
-						priorityJobDelays.containsKey("Trivial") ? priorityJobDelays.get("Trivial") : 0,
-						priorityJobDelays.containsKey("Analysis") ? priorityJobDelays.get("Analysis") : 0,
-						priorityJobDelays.containsKey("Draft") ? priorityJobDelays.get("Draft") : 0,
+						priorityBreqJobDelays.containsKey("Major") ? priorityBreqJobDelays.get("Major") : 0,
+						priorityBreqJobDelays.containsKey("Minor") ? priorityBreqJobDelays.get("Minor") : 0,
+						priorityBreqJobDelays.containsKey("Trivial") ? priorityBreqJobDelays.get("Trivial") : 0,
+						priorityBreqJobDelays.containsKey("Analysis") ? priorityBreqJobDelays.get("Analysis") : 0,
+						priorityBreqJobDelays.containsKey("Draft") ? priorityBreqJobDelays.get("Draft") : 0,
+
+						priorityPreqJobDelays.containsKey("Blocker") ? priorityPreqJobDelays.get("Blocker") : 0,
+						priorityPreqJobDelays.containsKey("Critical") ? priorityPreqJobDelays.get("Critical") : 0,
+						priorityPreqJobDelays.containsKey("Major") ? priorityPreqJobDelays.get("Major") : 0,
+						priorityPreqJobDelays.containsKey("Minor") ? priorityPreqJobDelays.get("Minor") : 0,
+						priorityPreqJobDelays.containsKey("Trivial") ? priorityPreqJobDelays.get("Trivial") : 0,
+						priorityPreqJobDelays.containsKey("Analysis") ? priorityPreqJobDelays.get("Analysis") : 0,
+						priorityPreqJobDelays.containsKey("Draft") ? priorityPreqJobDelays.get("Draft") : 0,
 						totalTimedJobMakespan,
 						totalEndSyncGap,
 						totalJobDelay });

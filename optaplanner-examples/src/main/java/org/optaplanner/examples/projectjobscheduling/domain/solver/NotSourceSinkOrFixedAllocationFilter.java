@@ -27,7 +27,7 @@ public class NotSourceSinkOrFixedAllocationFilter implements SelectionFilter<All
     public boolean accept(ScoreDirector scoreDirector, Allocation allocation) {
     	Job job = allocation.getJob();
         JobType jobType = job.getJobType();
-        return jobType != JobType.SOURCE && jobType != JobType.SINK && jobType != JobType.SUPER_SOURCE && jobType != JobType.SUPER_SINK && job.getFixedStartDate() == null;
+        return jobType != JobType.BREQ_SOURCE && jobType != JobType.BREQ_SINK && jobType != JobType.PREQ_SOURCE && jobType != JobType.PREQ_SINK && jobType != JobType.SUPER_SOURCE && jobType != JobType.SUPER_SINK && job.getFixedStartDate() == null;
     }
 
 }
