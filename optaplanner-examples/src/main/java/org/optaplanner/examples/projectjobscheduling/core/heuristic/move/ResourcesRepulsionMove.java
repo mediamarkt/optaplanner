@@ -53,6 +53,7 @@ public class ResourcesRepulsionMove extends AbstractMove {
 		scoreDirector.beforeVariableChanged(variableDescriptor, entity);
 		variableDescriptor.setValue(entity, toPlanningValue);
         scoreDirector.afterVariableChanged(variableDescriptor, entity);
+		scoreDirector.triggerVariableListeners();
 
 		for (CapacityProblem capacityProblem : capacityProblemsDetector) {
 
@@ -63,6 +64,7 @@ public class ResourcesRepulsionMove extends AbstractMove {
 			scoreDirector.beforeVariableChanged(newChange.getVariableDescriptor(), newChange.getEntity());
 			variableDescriptor.setValue(newChange.getEntity(), newChange.getToPlanningValue());
 			scoreDirector.afterVariableChanged(newChange.getVariableDescriptor(), newChange.getEntity());
+			scoreDirector.triggerVariableListeners();
 		}
 
 		//Do undo move
@@ -74,6 +76,7 @@ public class ResourcesRepulsionMove extends AbstractMove {
 			scoreDirector.beforeVariableChanged(change.getVariableDescriptor(), change.getEntity());
 			variableDescriptor.setValue(change.getEntity(), change.getToPlanningValue());
 			scoreDirector.afterVariableChanged(change.getVariableDescriptor(), change.getEntity());
+			scoreDirector.triggerVariableListeners();
 		}
 	}
 	

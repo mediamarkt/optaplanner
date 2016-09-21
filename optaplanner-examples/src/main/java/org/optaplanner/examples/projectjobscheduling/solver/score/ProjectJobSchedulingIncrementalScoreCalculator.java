@@ -53,6 +53,9 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 	private int totalEndSyncGap;
 	private HashMap<String, Integer> priorityBreqJobDelays;
 	private HashMap<String, Integer> priorityPreqJobDelays;
+
+	private HashMap<Integer, Integer> preqsJobDalaysByPriorityMarks;
+
 	private int totalCommitmentOverrun;
 	private int totalTimedJobMakespan;
 	
@@ -89,6 +92,7 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		draftEarlyStarted = 0;
 		priorityBreqJobDelays = new HashMap();
 		priorityPreqJobDelays = new HashMap();
+		preqsJobDalaysByPriorityMarks = new HashMap();
 		int minimumReleaseDate = Integer.MAX_VALUE;
 		for (Project p : projectList) {
 			minimumReleaseDate = Math.min(p.getReleaseDate(), minimumReleaseDate);
@@ -198,6 +202,15 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 			}
 		}
 
+		//New priorities
+		if(allocation.getJob().getJobType() == JobType.PREQ_SINK){
+			Integer weight = allocation.calculatePriorityWeight();
+			if (!preqsJobDalaysByPriorityMarks.containsKey(weight)) {
+				preqsJobDalaysByPriorityMarks.put(weight, 0);
+				}
+			preqsJobDalaysByPriorityMarks.compute(weight, (a, b) -> b - allocation.getEndDate());
+		}
+
 		// Committed date overruns
 		if (allocation.getJob().getCommittedDay() != 0) {
 			totalCommitmentOverrun -= (allocation.getEndDate() > allocation.getJob().getCommittedDay())
@@ -213,6 +226,8 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 				draftEarlyStarted -= Math.max(unallowedWeeksCountForAnalysis * 5 - (delay + allocation.getPredecessorsDoneDate()), 0);
 			}
 		}
+
+
 	}
 
 	private void retract(Allocation allocation) {
@@ -285,6 +300,15 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 				priorityPreqJobDelays.compute(allocation.getJob().getPriority(), (a, b) -> b + allocation.getEndDate());
 			}
 		}
+
+		//New priorities
+		if(allocation.getJob().getJobType() == JobType.PREQ_SINK){
+			Integer weight = allocation.calculatePriorityWeight();
+			if (!preqsJobDalaysByPriorityMarks.containsKey(weight)) {
+				preqsJobDalaysByPriorityMarks.put(weight, 0);
+			}
+			preqsJobDalaysByPriorityMarks.compute(weight, (a, b) -> b + allocation.getEndDate());
+		}
 		
 		// Committed date overruns
 		if (allocation.getJob().getCommittedDay() != 0) {
@@ -313,29 +337,52 @@ public class ProjectJobSchedulingIncrementalScoreCalculator extends AbstractIncr
 		maximumProjectEndDate = maximum;
 	}
 
+	private int getCombinedScoreByPriorityForPreq(String priority) {
+		Integer parentWeight = JobsPrioritiesWeightsProvider.getPriorityWeight(priority);
+		List<Integer> weights = JobsPrioritiesWeightsProvider.getPrioritiesWeights();
+
+		Integer score = 0;
+
+		for (Integer w : weights) {
+			Integer key = parentWeight * 10 + w;
+			Integer ends = preqsJobDalaysByPriorityMarks.containsKey(key) ? preqsJobDalaysByPriorityMarks.get(key) : 0;
+
+			score += ends * w;
+		}
+
+		return score;
+	}
+	
+	private int getScoreByPriorityForBreq(String priority) {
+		return priorityBreqJobDelays.containsKey(priority) ? priorityBreqJobDelays.get(priority) : 0;
+ 	}
+
 	public Score calculateScore() {
 		return BendableScore.valueOf(
-				new int[] { resourceCapcityViolations, draftEarlyStarted },
-				new int[] {totalCommitmentOverrun,
-						priorityBreqJobDelays.containsKey("Blocker") ? priorityBreqJobDelays.get("Blocker") : 0,
-						priorityBreqJobDelays.containsKey("Critical") ? priorityBreqJobDelays.get("Critical") : 0,
+				new int[] { 
+						resourceCapcityViolations, draftEarlyStarted						
+				},
+				new int[] {
+						totalCommitmentOverrun,
+						getCombinedScoreByPriorityForPreq("Blocker"),
+						getScoreByPriorityForBreq("Blocker"),
+						getCombinedScoreByPriorityForPreq("Critical"),
+						getScoreByPriorityForBreq("Critical"),
 						totalProjectDelay,
-						priorityBreqJobDelays.containsKey("Major") ? priorityBreqJobDelays.get("Major") : 0,
-						priorityBreqJobDelays.containsKey("Minor") ? priorityBreqJobDelays.get("Minor") : 0,
-						priorityBreqJobDelays.containsKey("Trivial") ? priorityBreqJobDelays.get("Trivial") : 0,
-						priorityBreqJobDelays.containsKey("Analysis") ? priorityBreqJobDelays.get("Analysis") : 0,
-						priorityBreqJobDelays.containsKey("Draft") ? priorityBreqJobDelays.get("Draft") : 0,
-
-						priorityPreqJobDelays.containsKey("Blocker") ? priorityPreqJobDelays.get("Blocker") : 0,
-						priorityPreqJobDelays.containsKey("Critical") ? priorityPreqJobDelays.get("Critical") : 0,
-						priorityPreqJobDelays.containsKey("Major") ? priorityPreqJobDelays.get("Major") : 0,
-						priorityPreqJobDelays.containsKey("Minor") ? priorityPreqJobDelays.get("Minor") : 0,
-						priorityPreqJobDelays.containsKey("Trivial") ? priorityPreqJobDelays.get("Trivial") : 0,
-						priorityPreqJobDelays.containsKey("Analysis") ? priorityPreqJobDelays.get("Analysis") : 0,
-						priorityPreqJobDelays.containsKey("Draft") ? priorityPreqJobDelays.get("Draft") : 0,
+						getCombinedScoreByPriorityForPreq("Major"),
+						getScoreByPriorityForBreq("Major"),
+						getCombinedScoreByPriorityForPreq("Minor"),
+						getScoreByPriorityForBreq("Minor"),
+						getCombinedScoreByPriorityForPreq("Trivial"),
+						getScoreByPriorityForBreq("Trivial"),
+						getCombinedScoreByPriorityForPreq("Analysis"),
+						getScoreByPriorityForBreq("Analysis"),
+						getCombinedScoreByPriorityForPreq("Draft"),
+						getScoreByPriorityForBreq("Draft"),
 						totalTimedJobMakespan,
 						totalEndSyncGap,
-						totalJobDelay });
+						totalJobDelay
+				});
 	}
 
 }
